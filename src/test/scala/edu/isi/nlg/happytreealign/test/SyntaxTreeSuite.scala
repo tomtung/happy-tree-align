@@ -25,6 +25,12 @@ class SyntaxTreeSuite extends FunSuite {
       b -> NonEmptySpan(0, 1), d -> NonEmptySpan(3, 3), a -> NonEmptySpan(0, 3)))
   }
 
+  test("toString") {
+    val expr = "( (a (b e f) c (d g)) )"
+    val tree = SyntaxTree.parse(expr)
+    assert(expr === tree.toString)
+  }
+
   test("breadth-first traverse") {
     val e = new SyntaxTree.Node("e")
     val f = new SyntaxTree.Node("f")

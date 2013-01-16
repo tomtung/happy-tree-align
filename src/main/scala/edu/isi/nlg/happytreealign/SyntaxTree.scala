@@ -15,6 +15,8 @@ class SyntaxTree private(val root: Node,
   def traverseLeftRightBottomUp: List[Node] = root.traverseLeftRightBottomUp
 
   def traversePostOrder: List[Node] = root.traversePostOrder
+
+  override lazy val toString: String = "( " + root.toString + " )"
 }
 
 object SyntaxTree {
@@ -22,6 +24,11 @@ object SyntaxTree {
   class Node(val label: String,
              val children: Vector[Node] = Vector.empty[Node]) {
     def isLeaf = children.isEmpty
+
+    override lazy val toString: String = {
+      if (children.isEmpty) label
+      else "(%s %s)".format(label, children.iterator.map(_.toString).mkString(" "))
+    }
 
     lazy val traversePostOrder: List[Node] = {
       @tailrec
