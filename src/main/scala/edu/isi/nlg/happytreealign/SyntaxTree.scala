@@ -1,9 +1,9 @@
 package edu.isi.nlg.happytreealign
 
-import collection.immutable.{Queue, IndexedSeq}
+import collection.immutable.Queue
 import util.parsing.combinator.RegexParsers
 import SyntaxTree.Node
-import collection.mutable
+import annotation.tailrec
 
 class SyntaxTree private(val root: Node,
                          val parentOf: Map[Node, Node],
@@ -20,28 +20,48 @@ class SyntaxTree private(val root: Node,
 object SyntaxTree {
 
   class Node(val label: String,
-             val children: IndexedSeq[Node] = IndexedSeq.empty[Node]) {
+             val children: Vector[Node] = Vector.empty[Node]) {
+    def isLeaf = children.isEmpty
+
     lazy val traversePostOrder: List[Node] = {
-      (children.map(_.traversePostOrder).flatten :+ this).toList
+      @tailrec
+      def doTraverse(stack: List[(Node, Boolean)], accu: List[Node]): List[Node] = {
+        stack match {
+          case Nil => accu.reverse
+          case (head, true) :: tail =>
+            doTraverse(tail, head :: accu)
+          case (head, false) :: tail =>
+            if (head.isLeaf)
+              doTraverse(tail, head :: accu)
+            else {
+              val nextNodes = head.children.iterator.map(_ -> false).toList
+              doTraverse(nextNodes ::: ((head, true) :: tail), accu)
+            }
+        }
+      }
+
+      doTraverse(List(this -> false), Nil)
     }
 
     lazy val traverseBreadthFirst: List[Node] = {
+      @tailrec
       def doTraverse(queue: Queue[Node], accu: List[Node]): List[Node] =
-        if (queue.isEmpty) accu
+        if (queue.isEmpty) accu.reverse
         else {
           val (h, q) = queue.dequeue
           doTraverse(q.enqueue(h.children), h :: accu)
         }
 
-      doTraverse(Queue(this), Nil).reverse
+      doTraverse(Queue(this), Nil)
     }
 
     lazy val traverseLeftRightBottomUp: List[Node] = {
+      @tailrec
       def doTraverse(queue: Queue[Node], accu: List[Node]): List[Node] =
         if (queue.isEmpty) accu
         else {
           val (h, q) = queue.dequeue
-          doTraverse(q.enqueue(h.children.reverse), h :: accu)
+          doTraverse(q.enqueue(h.children.reverseIterator.toList), h :: accu)
         }
 
       doTraverse(Queue(this), Nil)
@@ -50,33 +70,30 @@ object SyntaxTree {
 
   def apply(root: Node): SyntaxTree = {
     val (parentOf, spanOf) = {
-      val parentOf = mutable.Map[Node, Node]()
-      val spanOf = mutable.Map[Node, Span]()
-      def build(nodes: List[Node] = root.traversePostOrder,
-                leafCount: Int = 0) {
+      @tailrec
+      def build(nodes: List[Node],
+                parentOf: Map[Node, Node],
+                spanOf: Map[Node, Span],
+                leafCount: Int): (Map[Node, Node], Map[Node, Span]) =
         nodes match {
-          case node :: rest =>
-            if (node.children.isEmpty) {
+          case Nil =>
+            (parentOf, spanOf)
+          case head :: tail =>
+            if (head.isLeaf) {
               val span = Span(leafCount, leafCount)
-              spanOf += (node -> span)
-              build(rest, leafCount + 1)
+              build(tail, parentOf, spanOf + (head -> span), leafCount + 1)
             } else {
               val span = {
-                val chSpans = node.children.map(spanOf)
+                val chSpans = head.children.map(spanOf)
                 val from = chSpans.minBy(_.from).from
                 val to = chSpans.maxBy(_.to).to
                 Span(from, to)
               }
-              spanOf += (node -> span)
-              parentOf ++= node.children.map(_ -> node)
-              build(rest, leafCount)
+              build(tail, parentOf ++ head.children.iterator.map(_ -> head), spanOf + (head -> span), leafCount)
             }
-          case Nil =>
         }
-      }
 
-      build()
-      (parentOf.toMap, spanOf.toMap)
+      build(root.traversePostOrder, Map.empty, Map.empty, 0)
     }
 
 
@@ -92,7 +109,7 @@ object SyntaxTree {
     }
 
     def list: Parser[Node] = "(" ~> identifier ~ rep(sExpr) <~ ")" ^^ {
-      case root ~ ch => new Node(root, ch.toIndexedSeq)
+      case root ~ ch => new Node(root, ch.toVector)
     }
 
     def sExpr: Parser[Node] = atom | list

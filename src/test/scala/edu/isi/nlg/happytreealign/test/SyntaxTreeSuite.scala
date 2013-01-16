@@ -1,11 +1,10 @@
 package edu.isi.nlg.happytreealign.test
 
 import org.scalatest.FunSuite
-import collection.immutable.IndexedSeq
 import edu.isi.nlg.happytreealign.{Span, SyntaxTree}
 
 class SyntaxTreeSuite extends FunSuite {
-  test("parse and construction") {
+  test("parse and construct") {
     val expr = "( (a (b e f) c (d g)) )"
     val tree = SyntaxTree.parse(expr)
 
@@ -29,10 +28,10 @@ class SyntaxTreeSuite extends FunSuite {
   test("breadth-first traverse") {
     val e = new SyntaxTree.Node("e")
     val f = new SyntaxTree.Node("f")
-    val D = new SyntaxTree.Node("D", IndexedSeq(e))
-    val B = new SyntaxTree.Node("B", IndexedSeq(D))
-    val C = new SyntaxTree.Node("C", IndexedSeq(f))
-    val A = new SyntaxTree.Node("A", IndexedSeq(B, C))
+    val D = new SyntaxTree.Node("D", Vector(e))
+    val B = new SyntaxTree.Node("B", Vector(D))
+    val C = new SyntaxTree.Node("C", Vector(f))
+    val A = new SyntaxTree.Node("A", Vector(B, C))
 
     assert(A.traverseBreadthFirst.toList === List(A, B, C, D, f, e))
     assert(SyntaxTree(A).traverseBreadthFirst.toList === List(A, B, C, D, f, e))
@@ -41,10 +40,10 @@ class SyntaxTreeSuite extends FunSuite {
   test("left-right-bottom-up traverse") {
     val e = new SyntaxTree.Node("e")
     val f = new SyntaxTree.Node("f")
-    val D = new SyntaxTree.Node("D", IndexedSeq(e))
-    val B = new SyntaxTree.Node("B", IndexedSeq(D))
-    val C = new SyntaxTree.Node("C", IndexedSeq(f))
-    val A = new SyntaxTree.Node("A", IndexedSeq(B, C))
+    val D = new SyntaxTree.Node("D", Vector(e))
+    val B = new SyntaxTree.Node("B", Vector(D))
+    val C = new SyntaxTree.Node("C", Vector(f))
+    val A = new SyntaxTree.Node("A", Vector(B, C))
 
     assert(A.traverseLeftRightBottomUp === List(e, D, f, B, C, A))
     assert(SyntaxTree(A).traverseLeftRightBottomUp === List(e, D, f, B, C, A))
@@ -53,10 +52,10 @@ class SyntaxTreeSuite extends FunSuite {
   test("post-order traverse") {
     val e = new SyntaxTree.Node("e")
     val f = new SyntaxTree.Node("f")
-    val D = new SyntaxTree.Node("D", IndexedSeq(e))
-    val B = new SyntaxTree.Node("B", IndexedSeq(D))
-    val C = new SyntaxTree.Node("C", IndexedSeq(f))
-    val A = new SyntaxTree.Node("A", IndexedSeq(B, C))
+    val D = new SyntaxTree.Node("D", Vector(e))
+    val B = new SyntaxTree.Node("B", Vector(D))
+    val C = new SyntaxTree.Node("C", Vector(f))
+    val A = new SyntaxTree.Node("A", Vector(B, C))
 
     assert(A.traversePostOrder.toList === List(e, D, B, f, C, A))
     assert(SyntaxTree(A).traversePostOrder.toList === List(e, D, B, f, C, A))
