@@ -73,21 +73,21 @@ object SyntaxTree {
       @tailrec
       def build(nodes: List[Node],
                 parentOf: Map[Node, Node],
-                spanOf: Map[Node, Span],
-                leafCount: Int): (Map[Node, Node], Map[Node, Span]) =
+                spanOf: Map[Node, NonEmptySpan],
+                leafCount: Int): (Map[Node, Node], Map[Node, NonEmptySpan]) =
         nodes match {
           case Nil =>
             (parentOf, spanOf)
           case head :: tail =>
             if (head.isLeaf) {
-              val span = Span(leafCount, leafCount)
+              val span = NonEmptySpan(leafCount, leafCount)
               build(tail, parentOf, spanOf + (head -> span), leafCount + 1)
             } else {
               val span = {
                 val chSpans = head.children.map(spanOf)
                 val from = chSpans.minBy(_.from).from
                 val to = chSpans.maxBy(_.to).to
-                Span(from, to)
+                NonEmptySpan(from, to)
               }
               build(tail, parentOf ++ head.children.iterator.map(_ -> head), spanOf + (head -> span), leafCount)
             }

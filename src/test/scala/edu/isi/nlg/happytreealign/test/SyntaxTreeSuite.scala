@@ -1,7 +1,7 @@
 package edu.isi.nlg.happytreealign.test
 
 import org.scalatest.FunSuite
-import edu.isi.nlg.happytreealign.{Span, SyntaxTree}
+import edu.isi.nlg.happytreealign.{NonEmptySpan, SyntaxTree}
 
 class SyntaxTreeSuite extends FunSuite {
   test("parse and construct") {
@@ -21,8 +21,8 @@ class SyntaxTreeSuite extends FunSuite {
     assert(tree.parentOf === Map(b -> a, c -> a, d -> a, e -> b, f -> b, g -> d))
 
     assert(tree.spanOf === Map(
-      e -> Span(0, 0), f -> Span(1, 1), c -> Span(2, 2), g -> Span(3, 3),
-      b -> Span(0, 1), d -> Span(3, 3), a -> Span(0, 3)))
+      e -> NonEmptySpan(0, 0), f -> NonEmptySpan(1, 1), c -> NonEmptySpan(2, 2), g -> NonEmptySpan(3, 3),
+      b -> NonEmptySpan(0, 1), d -> NonEmptySpan(3, 3), a -> NonEmptySpan(0, 3)))
   }
 
   test("breadth-first traverse") {
