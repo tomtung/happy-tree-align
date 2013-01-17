@@ -12,7 +12,7 @@ class WordPosAlignmentSuite extends FunSuite {
     assert(a.eToF === Map(0 -> SortedSet(0, 2), 1 -> SortedSet(0), 2 -> SortedSet(0, 1, 10), 3 -> SortedSet(10)))
   }
 
-  test("span mapping") {
+  test("span mapping (F to E and vice versa)") {
     val a = WordPosAlignment.fromFEPairs(List(0 -> 0, 0 -> 1, 0 -> 2, 1 -> 2, 2 -> 0, 10 -> 2, 10 -> 3))
 
     assert(a.fSpanToESpan(EmptySpan) === EmptySpan)
