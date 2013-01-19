@@ -66,4 +66,22 @@ class SyntaxTreeSuite extends FunSuite {
     assert(A.traversePostOrder.toList === List(e, D, B, f, C, A))
     assert(SyntaxTree(A).traversePostOrder.toList === List(e, D, B, f, C, A))
   }
+
+  test("replace node") {
+    val e = new SyntaxTree.Node("e")
+    val f = new SyntaxTree.Node("f")
+    val D = new SyntaxTree.Node("D", Vector(e))
+    val B = new SyntaxTree.Node("B", Vector(D))
+    val C = new SyntaxTree.Node("C", Vector(f))
+    val A = new SyntaxTree.Node("A", Vector(B, C))
+    val tree = SyntaxTree(A)
+
+    val ee = new SyntaxTree.Node("ee")
+    val tree1: SyntaxTree = tree.replace(e, ee)
+    assert(tree1.toString === "( (A (B (D ee)) (C f)) )")
+
+    val BB = new SyntaxTree.Node("BB", Vector(ee))
+    val tree2 = tree.replace(B, BB)
+    assert(tree2.toString === "( (A (BB ee) (C f)) )")
+  }
 }

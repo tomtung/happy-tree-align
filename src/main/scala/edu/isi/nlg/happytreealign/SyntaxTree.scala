@@ -7,14 +7,28 @@ import annotation.tailrec
 
 class SyntaxTree private(val root: Node,
                          val parentOf: Map[Node, Node],
-                         val spanOf: Map[Node, Span],
-                         val isFromMerge: Set[Node]) {
-
+                         val spanOf: Map[Node, Span]) {
   def traverseBreadthFirst: List[Node] = root.traverseBreadthFirst
 
   def traverseLeftRightBottomUp: List[Node] = root.traverseLeftRightBottomUp
 
   def traversePostOrder: List[Node] = root.traversePostOrder
+
+  def replace(oldNode: Node, newNode: Node): SyntaxTree = {
+    @tailrec
+    def getUpdatedRoot(oldNode: Node, newNode: Node): Node =
+      parentOf.get(oldNode) match {
+        case None => newNode // replacing the root
+        case Some(parent) =>
+          val i = parent.children.indexOf(oldNode)
+          val updatedChildren = (parent.children.slice(0, i) :+ newNode) ++ parent.children.slice(i + 1, parent.children.length)
+          val updatedParent = new Node(parent.label, updatedChildren)
+          getUpdatedRoot(parent, updatedParent)
+      }
+
+    val updatedRoot = getUpdatedRoot(oldNode, newNode)
+    SyntaxTree(updatedRoot)
+  }
 
   override lazy val toString: String = "( " + root.toString + " )"
 }
@@ -22,7 +36,8 @@ class SyntaxTree private(val root: Node,
 object SyntaxTree {
 
   class Node(val label: String,
-             val children: Vector[Node] = Vector.empty[Node]) {
+             val children: Vector[Node] = Vector.empty[Node],
+             val isMerged: Boolean = false) {
     def isLeaf = children.isEmpty
 
     override lazy val toString: String = {
@@ -104,7 +119,7 @@ object SyntaxTree {
     }
 
 
-    new SyntaxTree(root, parentOf, spanOf, Set.empty)
+    new SyntaxTree(root, parentOf, spanOf)
   }
 
   private object TreeStructureParser extends RegexParsers {
