@@ -19,10 +19,14 @@ class TransformationSuite extends FunSuite {
   }
 
   test("apply articulate transformation (fail to apply)") {
-    val tree = SyntaxTree.parse("( (a (b x) (d (a b d)) x b d) )")
-    val newTreeOp = ArticulateTrans(parentLabel = "a", leftLabel = "b", rightLabel = "c")(tree)
+    val articulate = ArticulateTrans(parentLabel = "a", leftLabel = "b", rightLabel = "c")
+    val tree1 = SyntaxTree.parse("( (a (b x) (d (a b d)) x b d) )")
+    val newTree1Op = articulate(tree1)
+    assert(newTree1Op.isEmpty)
 
-    assert(newTreeOp.isEmpty)
+    val tree2 = articulate(SyntaxTree.parse("( (a (b x) (c (a b c)) x b c) )")).get
+    val newTree2Op = ArticulateTrans(parentLabel = "a+b", leftLabel = "a", rightLabel = "b")(tree2)
+    assert(newTree2Op.isEmpty)
   }
 
   test("extract articulate transformations") {
@@ -34,9 +38,7 @@ class TransformationSuite extends FunSuite {
     ))
 
     val newTree = ArticulateTrans(parentLabel = "a", leftLabel = "b", rightLabel = "c")(tree).get
-    assert(ArticulateTrans.extractFrom(newTree) === Set(
-      ArticulateTrans("b+c", "b", "c")
-    ))
+    assert(ArticulateTrans.extractFrom(newTree) === Set.empty)
   }
 
 }
