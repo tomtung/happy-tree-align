@@ -1,7 +1,7 @@
 package edu.isi.nlg.happytreealign.test
 
 import org.scalatest.FunSuite
-import edu.isi.nlg.happytreealign.{SyntaxTree, ArticulateTrans}
+import edu.isi.nlg.happytreealign.{FlattenTrans, SyntaxTree, ArticulateTrans}
 
 class TransformationSuite extends FunSuite {
   test("applying articulate transformation (example in original paper)") {
@@ -41,4 +41,25 @@ class TransformationSuite extends FunSuite {
     assert(ArticulateTrans.extractFrom(newTree) === Set.empty)
   }
 
+  test("applying flatten transformation (example in original paper)") {
+    val tree = SyntaxTree.parse("( (NP (DT the) (NNP China) (NML (NNP Trade) (NNP Promotion)) (NNP Council)) )")
+    val newTree: SyntaxTree = FlattenTrans("NP", "NML")(tree).get
+
+    assert(newTree.toString === "( (NP (DT the) (NNP China) (NNP Trade) (NNP Promotion) (NNP Council)) )")
+  }
+
+  test("applying flatten transformation (test for exhaustion)") {
+    val tree = SyntaxTree.parse("( (a (b (a (b a b)) b) (b a b)) )")
+    val newTree: SyntaxTree = FlattenTrans("a", "b")(tree).get
+
+    assert(newTree.toString === "( (a (a a b) b a b) )")
+  }
+
+  test("extract flatten transformations") {
+    val tree1 = SyntaxTree.parse("( (a (b (d g h i) e) (c (f j k))) )")
+    assert(FlattenTrans.extractFrom(tree1) === Set(
+      FlattenTrans("a", "b"),
+      FlattenTrans("c", "f")
+    ))
+  }
 }
