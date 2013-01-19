@@ -5,9 +5,36 @@ import util.parsing.combinator.RegexParsers
 import SyntaxTree.Node
 import annotation.tailrec
 
-class SyntaxTree private(val root: Node,
-                         val parentOf: Map[Node, Node],
-                         val spanOf: Map[Node, Span]) {
+class SyntaxTree(val root: Node) {
+
+  lazy val (parentOf, spanOf) = {
+    @tailrec
+    def build(nodes: List[Node],
+              parentOf: Map[Node, Node],
+              spanOf: Map[Node, NonEmptySpan],
+              leafCount: Int): (Map[Node, Node], Map[Node, NonEmptySpan]) =
+      nodes match {
+        case Nil =>
+          (parentOf, spanOf)
+        case head :: tail =>
+          if (head.isLeaf) {
+            val span = NonEmptySpan(leafCount, leafCount)
+            build(tail, parentOf, spanOf + (head -> span), leafCount + 1)
+          } else {
+            val span = {
+              val chSpans = head.children.map(spanOf)
+              val from = chSpans.minBy(_.from).from
+              val to = chSpans.maxBy(_.to).to
+              NonEmptySpan(from, to)
+            }
+            build(tail, parentOf ++ head.children.iterator.map(_ -> head), spanOf + (head -> span), leafCount)
+          }
+      }
+
+    build(root.traversePostOrder, Map.empty, Map.empty, 0)
+  }
+
+
   def traverseBreadthFirst: List[Node] = root.traverseBreadthFirst
 
   def traverseLeftRightBottomUp: List[Node] = root.traverseLeftRightBottomUp
@@ -27,7 +54,7 @@ class SyntaxTree private(val root: Node,
       }
 
     val updatedRoot = getUpdatedRoot(oldNode, newNode)
-    SyntaxTree(updatedRoot)
+    new SyntaxTree(updatedRoot)
   }
 
   override lazy val toString: String = "( " + root.toString + " )"
@@ -90,38 +117,6 @@ object SyntaxTree {
     }
   }
 
-  def apply(root: Node): SyntaxTree = {
-    val (parentOf, spanOf) = {
-      @tailrec
-      def build(nodes: List[Node],
-                parentOf: Map[Node, Node],
-                spanOf: Map[Node, NonEmptySpan],
-                leafCount: Int): (Map[Node, Node], Map[Node, NonEmptySpan]) =
-        nodes match {
-          case Nil =>
-            (parentOf, spanOf)
-          case head :: tail =>
-            if (head.isLeaf) {
-              val span = NonEmptySpan(leafCount, leafCount)
-              build(tail, parentOf, spanOf + (head -> span), leafCount + 1)
-            } else {
-              val span = {
-                val chSpans = head.children.map(spanOf)
-                val from = chSpans.minBy(_.from).from
-                val to = chSpans.maxBy(_.to).to
-                NonEmptySpan(from, to)
-              }
-              build(tail, parentOf ++ head.children.iterator.map(_ -> head), spanOf + (head -> span), leafCount)
-            }
-        }
-
-      build(root.traversePostOrder, Map.empty, Map.empty, 0)
-    }
-
-
-    new SyntaxTree(root, parentOf, spanOf)
-  }
-
   private object TreeStructureParser extends RegexParsers {
 
     def identifier: Parser[String] = regex( """[^\(\)\s]+""".r)
@@ -147,5 +142,5 @@ object SyntaxTree {
     }
   }
 
-  def parse(s: String): SyntaxTree = SyntaxTree(TreeStructureParser(s))
+  def parse(s: String): SyntaxTree = new SyntaxTree(TreeStructureParser(s))
 }

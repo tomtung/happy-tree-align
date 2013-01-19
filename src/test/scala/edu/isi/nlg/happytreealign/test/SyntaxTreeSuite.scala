@@ -40,7 +40,7 @@ class SyntaxTreeSuite extends FunSuite {
     val A = new SyntaxTree.Node("A", Vector(B, C))
 
     assert(A.traverseBreadthFirst.toList === List(A, B, C, D, f, e))
-    assert(SyntaxTree(A).traverseBreadthFirst.toList === List(A, B, C, D, f, e))
+    assert(new SyntaxTree(A).traverseBreadthFirst.toList === List(A, B, C, D, f, e))
   }
 
   test("left-right-bottom-up traverse") {
@@ -52,7 +52,7 @@ class SyntaxTreeSuite extends FunSuite {
     val A = new SyntaxTree.Node("A", Vector(B, C))
 
     assert(A.traverseLeftRightBottomUp === List(e, D, f, B, C, A))
-    assert(SyntaxTree(A).traverseLeftRightBottomUp === List(e, D, f, B, C, A))
+    assert(new SyntaxTree(A).traverseLeftRightBottomUp === List(e, D, f, B, C, A))
   }
 
   test("post-order traverse") {
@@ -64,7 +64,7 @@ class SyntaxTreeSuite extends FunSuite {
     val A = new SyntaxTree.Node("A", Vector(B, C))
 
     assert(A.traversePostOrder.toList === List(e, D, B, f, C, A))
-    assert(SyntaxTree(A).traversePostOrder.toList === List(e, D, B, f, C, A))
+    assert(new SyntaxTree(A).traversePostOrder.toList === List(e, D, B, f, C, A))
   }
 
   test("replace node") {
@@ -74,7 +74,7 @@ class SyntaxTreeSuite extends FunSuite {
     val B = new SyntaxTree.Node("B", Vector(D))
     val C = new SyntaxTree.Node("C", Vector(f))
     val A = new SyntaxTree.Node("A", Vector(B, C))
-    val tree = SyntaxTree(A)
+    val tree = new SyntaxTree(A)
 
     val ee = new SyntaxTree.Node("ee")
     val tree1: SyntaxTree = tree.replace(e, ee)
