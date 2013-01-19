@@ -21,7 +21,7 @@ class SyntaxTree private(val root: Node,
         case None => newNode // replacing the root
         case Some(parent) =>
           val i = parent.children.indexOf(oldNode)
-          val updatedChildren = (parent.children.slice(0, i) :+ newNode) ++ parent.children.slice(i + 1, parent.children.length)
+          val updatedChildren = parent.children.patch(i, List(newNode), 1)
           val updatedParent = new Node(parent.label, updatedChildren)
           getUpdatedRoot(parent, updatedParent)
       }

@@ -32,9 +32,7 @@ case class ArticulateTrans(parentLabel: String, leftLabel: String, rightLabel: S
           }
 
           val updatedParent = {
-            val updatedChildren =
-              (children.slice(0, i) :+ mergedNode) ++
-                children.slice(i + 2, children.length)
+            val updatedChildren = children.patch(i, List(mergedNode), 2)
             new Node(parent.label, updatedChildren)
           }
 
