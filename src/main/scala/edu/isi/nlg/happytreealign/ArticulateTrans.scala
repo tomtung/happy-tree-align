@@ -6,7 +6,7 @@ case class ArticulateTrans(parentLabel: String,
                            leftLabel: String,
                            rightLabel: String) extends Transformation {
 
-  override protected def applyOnNodeAsParent(parent: Node): Option[Node] = {
+  override protected def applyOnAnchorNode(parent: Node): Option[Node] = {
     import ArticulateTrans._
 
     if (parent.isLeaf || parent.label != parentLabel || freshlyArticulated(parent))
@@ -53,16 +53,11 @@ object ArticulateTrans extends TransformationExtractor {
     }
 
   override def extract(tree: SyntaxTree) = {
-    tree.traverseLeftRightBottomUp.iterator.
-      filterNot(p => p.isLeaf || freshlyArticulated(p)).
-      flatMap(
-      parent => {
-        def chIter = parent.children.iterator
-        (chIter zip chIter.drop(1)).collect({
-          case (l, r) if !l.isMerged && !r.isMerged =>
-            ArticulateTrans(parent.label, l.label, r.label)
-        })
-      }).
-      toSet
-  }
+    for (
+      p <- tree.traverseLeftRightBottomUp.iterator
+      if !p.isLeaf && !freshlyArticulated(p);
+      (l, r) <- p.children.iterator zip p.children.iterator.drop(1)
+      if !l.isMerged && !r.isMerged
+    ) yield ArticulateTrans(p.label, l.label, r.label)
+  }.toSet
 }
