@@ -3,7 +3,7 @@ package edu.isi.nlg.happytreealign
 import edu.isi.nlg.happytreealign.SyntaxTree.Node
 import annotation.tailrec
 
-abstract class Transformation {
+trait Transformation {
   protected def applyOnAnchorNode(node: Node): Option[Node]
 
   def apply(tree: SyntaxTree): Option[SyntaxTree] = {

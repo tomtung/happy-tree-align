@@ -33,8 +33,8 @@ case class FlattenTrans(parentLabel: String,
 }
 
 object FlattenTrans extends TransformationExtractor {
-  override def extract(tree: SyntaxTree) = {
-    def extractAtTargetPos(i: Int, parent: Node): List[FlattenTrans] = {
+  override protected def extractAtAnchorNode(parent: Node): TraversableOnce[Transformation] = {
+    def extractAtTargetPos(i: Int): List[FlattenTrans] = {
       val target = parent.children(i)
       val trans = FlattenTrans(parent.label, target.label)
 
@@ -50,11 +50,9 @@ object FlattenTrans extends TransformationExtractor {
     }
 
     for (
-      p <- tree.traverseLeftRightBottomUp.iterator
-      if !p.isLeaf;
-      (t, tPos) <- p.children.iterator.zipWithIndex
-      if (t.children.length == 2);
-      tr <- extractAtTargetPos(tPos, p)
-    ) yield tr
-  }.toSet
+      (target, tPos) <- parent.children.iterator.zipWithIndex
+      if (target.children.length == 2);
+      trans <- extractAtTargetPos(tPos)
+    ) yield trans
+  }
 }

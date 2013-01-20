@@ -1,8 +1,13 @@
 package edu.isi.nlg.happytreealign
 
-trait TransformationExtractor {
-  def extract(tree: SyntaxTree): Set[Transformation]
+import edu.isi.nlg.happytreealign.SyntaxTree.Node
 
-  // TODO extract a protected extractFromAnchorNode, and provide a basic implementation of extract?
-  // see current implementation of PromoteTrans.extract
+trait TransformationExtractor {
+  def extract(tree: SyntaxTree): Set[Transformation] = {
+    tree.traverseLeftRightBottomUp.iterator.
+      flatMap(extractAtAnchorNode).
+      toSet
+  }
+
+  protected def extractAtAnchorNode(node: Node): TraversableOnce[Transformation]
 }

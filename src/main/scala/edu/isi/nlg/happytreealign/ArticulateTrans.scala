@@ -52,12 +52,14 @@ object ArticulateTrans extends TransformationExtractor {
       node.label == createMergedLabel(l, r)
     }
 
-  override def extract(tree: SyntaxTree) = {
-    for (
-      p <- tree.traverseLeftRightBottomUp.iterator
-      if !p.isLeaf && !freshlyArticulated(p);
-      (l, r) <- p.children.iterator zip p.children.iterator.drop(1)
-      if !l.isMerged && !r.isMerged
-    ) yield ArticulateTrans(p.label, l.label, r.label)
-  }.toSet
+  override protected def extractAtAnchorNode(parent: Node): TraversableOnce[Transformation] = {
+    if (parent.children.length < 2 || freshlyArticulated(parent)) Traversable.empty
+    else {
+      def chIter = parent.children.iterator
+      for (
+        (l, r) <- chIter zip chIter.drop(1)
+        if !l.isMerged && !r.isMerged
+      ) yield ArticulateTrans(parent.label, l.label, r.label)
+    }
+  }
 }

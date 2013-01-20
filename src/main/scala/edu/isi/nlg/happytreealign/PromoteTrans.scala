@@ -52,33 +52,27 @@ case class PromoteTrans(grandparentLabel: String,
 }
 
 object PromoteTrans extends TransformationExtractor {
-  def extract(tree: SyntaxTree): Set[Transformation] = {
-    def extractAtNode(grandparent: Node): List[PromoteTrans] = {
-      assert(!grandparent.isLeaf)
-      var lst: List[PromoteTrans] = Nil
+  override protected def extractAtAnchorNode(grandparent: Node): TraversableOnce[Transformation] = {
+    if (grandparent.isLeaf) return Nil
 
-      {
-        val leftParent = grandparent.children.head
-        if (!leftParent.isLeaf) {
-          val child = leftParent.children.last
-          lst = PromoteTrans(grandparent.label, leftParent.label, child.label, Right) :: lst
-        }
+    var lst: List[PromoteTrans] = Nil
+
+    {
+      val leftParent = grandparent.children.head
+      if (!leftParent.isLeaf) {
+        val child = leftParent.children.last
+        lst = PromoteTrans(grandparent.label, leftParent.label, child.label, Right) :: lst
       }
-
-      {
-        val rightParent = grandparent.children.last
-        if (!rightParent.isLeaf) {
-          val child = rightParent.children.head
-          lst = PromoteTrans(grandparent.label, rightParent.label, child.label, Left) :: lst
-        }
-      }
-
-      lst
     }
 
-    tree.traverseLeftRightBottomUp.iterator.
-      filterNot(_.isLeaf).
-      flatMap(extractAtNode).
-      toSet
+    {
+      val rightParent = grandparent.children.last
+      if (!rightParent.isLeaf) {
+        val child = rightParent.children.head
+        lst = PromoteTrans(grandparent.label, rightParent.label, child.label, Left) :: lst
+      }
+    }
+
+    lst
   }
 }
