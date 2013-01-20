@@ -1,7 +1,8 @@
 package edu.isi.nlg.happytreealign.test
 
 import org.scalatest.FunSuite
-import edu.isi.nlg.happytreealign.{FlattenTrans, SyntaxTree, ArticulateTrans}
+import edu.isi.nlg.happytreealign.{FlattenTrans, SyntaxTree, ArticulateTrans, Direction}
+import Direction._
 
 class TransformationSuite extends FunSuite {
   test("applying articulate transformation (example in original paper)") {
@@ -31,14 +32,14 @@ class TransformationSuite extends FunSuite {
 
   test("extract articulate transformations") {
     val tree = SyntaxTree.parse("( (a (b x) (c (a b c)) x b c) )")
-    assert(ArticulateTrans.extractFrom(tree) === Set(
+    assert(ArticulateTrans.extract(tree) === Set(
       ArticulateTrans("a", "b", "c"),
       ArticulateTrans("a", "c", "x"),
       ArticulateTrans("a", "x", "b")
     ))
 
     val newTree = ArticulateTrans(parentLabel = "a", leftLabel = "b", rightLabel = "c")(tree).get
-    assert(ArticulateTrans.extractFrom(newTree) === Set.empty)
+    assert(ArticulateTrans.extract(newTree) === Set.empty)
   }
 
   test("applying flatten transformation (example in original paper)") {
@@ -57,9 +58,23 @@ class TransformationSuite extends FunSuite {
 
   test("extract flatten transformations") {
     val tree1 = SyntaxTree.parse("( (a (b (d g h i) e) (c (f j k))) )")
-    assert(FlattenTrans.extractFrom(tree1) === Set(
+    assert(FlattenTrans.extract(tree1) === Set(
       FlattenTrans("a", "b"),
       FlattenTrans("c", "f")
     ))
+  }
+
+  test("applying flatten transformation with context (example in original paper)") {
+    val tree = SyntaxTree.parse("( (NP (DT the) (NNP1 China) (NML (NNP Trade) (NNP Promotion)) (NNP2 Council)) )")
+
+    assert(
+      FlattenTrans("NP", "NML", Some(("NNP1", Left)))(tree).get.toString ===
+        "( (NP (DT the) (NNP1 China) (NNP Trade) (NNP Promotion) (NNP2 Council)) )")
+    assert(
+      FlattenTrans("NP", "NML", Some(("NNP2", Right)))(tree).get.toString ===
+        "( (NP (DT the) (NNP1 China) (NNP Trade) (NNP Promotion) (NNP2 Council)) )")
+
+    assert(FlattenTrans("NP", "NML", Some(("NNP1", Right)))(tree).isEmpty)
+    assert(FlattenTrans("NP", "NML", Some(("NNP2", Left)))(tree).isEmpty)
   }
 }

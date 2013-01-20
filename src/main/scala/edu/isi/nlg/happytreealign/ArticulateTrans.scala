@@ -1,66 +1,47 @@
 package edu.isi.nlg.happytreealign
 
 import SyntaxTree.Node
-import annotation.tailrec
 
-case class ArticulateTrans(parentLabel: String, leftLabel: String, rightLabel: String) {
+case class ArticulateTrans(parentLabel: String,
+                           leftLabel: String,
+                           rightLabel: String) extends Transformation {
 
-  import ArticulateTrans._
+  override protected def applyOnNodeAsParent(parent: Node): Option[Node] = {
+    import ArticulateTrans._
 
-  def apply(tree: SyntaxTree): Option[SyntaxTree] = {
-    def applyOnParentNode(parent: Node): Option[Node] = {
-      if (parent.isLeaf || parent.label != parentLabel || freshlyArticulated(parent))
-        return None
+    if (parent.isLeaf || parent.label != parentLabel || freshlyArticulated(parent))
+      return None
 
-      val children = parent.children
-      val idxOp = (0 until children.length - 1).find(
-        i => {
-          val left = children(i)
-          val right = children(i + 1)
-          !left.isMerged && !right.isMerged &&
-            left.label == leftLabel && right.label == rightLabel
-        }
-      )
-
-      idxOp match {
-        case None => None
-
-        case Some(i) =>
-          val left = children(i)
-          val right = children(i + 1)
-          val mergedNode = {
-            val mergedLabel = createMergedLabel(left, right)
-            val mergedChildren = Vector(left, right)
-            new Node(mergedLabel, mergedChildren, true)
-          }
-
-          val updatedParent = {
-            val updatedChildren = children.patch(i, List(mergedNode), 2)
-            new Node(parent.label, updatedChildren)
-          }
-
-          Some(updatedParent)
+    val children = parent.children
+    val idxOp = (0 until children.length - 1).find(
+      i => {
+        val left = children(i)
+        val right = children(i + 1)
+        !left.isMerged && !right.isMerged &&
+          left.label == leftLabel && right.label == rightLabel
       }
-    }
+    )
 
-    @tailrec
-    def doApply(tree: SyntaxTree, returnNoneIfFail: Boolean): Option[SyntaxTree] = {
-      val pairOp = tree.traverseLeftRightBottomUp.iterator.
-        map(node => node -> applyOnParentNode(node)).
-        find(_._2.isDefined)
-      pairOp match {
-        case None if returnNoneIfFail => None
-        case None => Some(tree)
-        case Some((parent, Some(updatedParent))) =>
-          doApply(tree.replace(parent, updatedParent), returnNoneIfFail = false)
+    idxOp.map(i => {
+      val left = children(i)
+      val right = children(i + 1)
+      val mergedNode = {
+        val mergedLabel = createMergedLabel(left, right)
+        val mergedChildren = Vector(left, right)
+        new Node(mergedLabel, mergedChildren, true)
       }
-    }
 
-    doApply(tree, returnNoneIfFail = true)
+      val updatedParent = {
+        val updatedChildren = children.patch(i, List(mergedNode), 2)
+        new Node(parent.label, updatedChildren)
+      }
+
+      updatedParent
+    })
   }
 }
 
-object ArticulateTrans {
+object ArticulateTrans extends TransformationExtractor {
 
   private def createMergedLabel(left: Node, right: Node): String = left.label + "+" + right.label
 
@@ -71,7 +52,7 @@ object ArticulateTrans {
       node.label == createMergedLabel(l, r)
     }
 
-  def extractFrom(tree: SyntaxTree): Set[ArticulateTrans] = {
+  override def extract(tree: SyntaxTree) = {
     tree.traverseLeftRightBottomUp.iterator.
       filterNot(p => p.isLeaf || freshlyArticulated(p)).
       flatMap(
