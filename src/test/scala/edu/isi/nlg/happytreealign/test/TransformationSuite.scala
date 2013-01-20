@@ -6,14 +6,14 @@ import Direction._
 import scala.Some
 
 class TransformationSuite extends FunSuite {
-  test("applying articulate transformation (example in original paper)") {
+  test("apply articulate transformation (example in original paper)") {
     val tree = SyntaxTree.parse("( (S (NP Other members) (VP will arrive in two groups) (. .)) )")
     val newTree = ArticulateTrans(parentLabel = "S", leftLabel = "NP", rightLabel = "VP")(tree).get
 
     assert(newTree.toString === "( (S (NP+VP (NP Other members) (VP will arrive in two groups)) (. .)) )")
   }
 
-  test("applying articulate transformation (test for exhaustion)") {
+  test("apply articulate transformation (test for exhaustion)") {
     val tree = SyntaxTree.parse("( (a (b x) (c (a b c)) x b c) )")
     val newTree = ArticulateTrans(parentLabel = "a", leftLabel = "b", rightLabel = "c")(tree).get
 
@@ -43,14 +43,14 @@ class TransformationSuite extends FunSuite {
     assert(ArticulateTrans.extract(newTree) === Set.empty)
   }
 
-  test("applying flatten transformation (example in original paper)") {
+  test("apply flatten transformation (example in original paper)") {
     val tree = SyntaxTree.parse("( (NP (DT the) (NNP China) (NML (NNP Trade) (NNP Promotion)) (NNP Council)) )")
     val newTree: SyntaxTree = FlattenTrans("NP", "NML")(tree).get
 
     assert(newTree.toString === "( (NP (DT the) (NNP China) (NNP Trade) (NNP Promotion) (NNP Council)) )")
   }
 
-  test("applying flatten transformation (test for exhaustion)") {
+  test("apply flatten transformation (test for exhaustion)") {
     val tree = SyntaxTree.parse("( (a (b (a (b a b)) b) (b a b)) )")
     val newTree: SyntaxTree = FlattenTrans("a", "b")(tree).get
 
@@ -70,7 +70,7 @@ class TransformationSuite extends FunSuite {
     ))
   }
 
-  test("applying flatten transformation with context (example in original paper)") {
+  test("apply flatten transformation with context (example in original paper)") {
     val tree = SyntaxTree.parse("( (NP (DT the) (NNP1 China) (NML (NNP Trade) (NNP Promotion)) (NNP2 Council)) )")
 
     assert(
@@ -84,7 +84,7 @@ class TransformationSuite extends FunSuite {
     assert(FlattenTrans("NP", "NML", Some(("NNP2", Right)))(tree).isEmpty)
   }
 
-  test("applying promote transformation") {
+  test("apply promote transformation") {
     val tree1 = SyntaxTree.parse("( (PP (IN by) (NP (NP the French player) (NP1 N. Taugia))) )")
     assert(
       PromoteTrans("PP", "NP", "NP", Left)(tree1).get.toString ===
@@ -110,6 +110,31 @@ class TransformationSuite extends FunSuite {
       PromoteTrans("PP", "NP", "NP", Left),
       PromoteTrans("NP", "NP", "player", Right),
       PromoteTrans("NP", "NP", "N.", Left)
+    ))
+  }
+
+  test("apply demote transformation") {
+    val tree = SyntaxTree.parse("( (VP (VB fly) (PP (IN to) (NP Beijing)) (PP (IN on) (NP the 2nd))) )")
+    assert(DemoteTrans("VP", "PP", "VB", Right)(tree).get.toString ===
+      "( (VP (PP (VB fly) (IN to) (NP Beijing)) (PP (IN on) (NP the 2nd))) )")
+    assert(DemoteTrans("VP", "PP", "PP", Left)(tree).get.toString ===
+      "( (VP (VB fly) (PP (IN to) (NP Beijing) (PP (IN on) (NP the 2nd)))) )")
+    assert(DemoteTrans("PP", "IN", "NP", Left)(tree).get.toString ===
+      "( (VP (VB fly) (PP (IN to (NP Beijing))) (PP (IN on (NP the 2nd)))) )")
+    assert(DemoteTrans("PP", "NP", "IN", Right)(tree).get.toString ===
+      "( (VP (VB fly) (PP (NP (IN to) Beijing)) (PP (NP (IN on) the 2nd))) )")
+    assert(DemoteTrans("NP", "the", "2nd", Left)(tree).isEmpty)
+  }
+
+  test("extract demote transformations") {
+    val tree = SyntaxTree.parse("( (VP (VB fly) (PP (IN to) (NP Beijing)) (PP (IN on) (NP the 2nd))) )")
+    assert(DemoteTrans.extract(tree) === Set(
+      DemoteTrans("VP", "VB", "PP", Left),
+      DemoteTrans("VP", "PP", "VB", Right),
+      DemoteTrans("VP", "PP", "PP", Left),
+      DemoteTrans("VP", "PP", "PP", Right),
+      DemoteTrans("PP", "IN", "NP", Left),
+      DemoteTrans("PP", "NP", "IN", Right)
     ))
   }
 }

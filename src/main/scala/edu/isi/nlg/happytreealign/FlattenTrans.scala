@@ -7,28 +7,26 @@ case class FlattenTrans(parentLabel: String,
                         targetLabel: String,
                         siblingLabelAndDirection: Option[(String, Direction)] = None) extends Transformation {
   override protected def applyOnAnchorNode(parent: Node): Option[Node] = {
-    if (parent.isLeaf || parent.label != parentLabel)
-      return None
+    if (parent.isLeaf || parent.label != parentLabel) None
+    else {
+      val children = parent.children
+      for (
+        i <- (0 until children.length).iterator;
 
-    val children = parent.children
-    val idxOp = (0 until children.length).find(
-      i => {
-        val t = children(i)
-        t.label == targetLabel && t.children.length == 2 &&
+        target = children(i)
+        if target.label == targetLabel && target.children.length == 2 &&
           ((siblingLabelAndDirection: @unchecked) match {
             case None => true
             case Some((siblingLabel, Right)) =>
               i > 0 && children(i - 1).label == siblingLabel
             case Some((siblingLabel, Left)) =>
               i < children.length - 1 && children(i + 1).label == siblingLabel
-          })
-      })
+          });
 
-    idxOp.map(idx => {
-      val updatedChildren = children.patch(idx, children(idx).children, 1)
-      val updatedParent = new Node(parent.label, updatedChildren)
-      updatedParent
-    })
+        updatedChildren = children.patch(i, target.children, 1);
+        updatedParent = new Node(parent.label, updatedChildren)
+      ) yield updatedParent
+    }.toIterable.headOption
   }
 }
 

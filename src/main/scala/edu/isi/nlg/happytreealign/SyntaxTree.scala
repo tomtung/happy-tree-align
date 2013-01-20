@@ -42,19 +42,22 @@ class SyntaxTree(val root: Node) {
   def traversePostOrder: List[Node] = root.traversePostOrder
 
   def replace(oldNode: Node, newNode: Node): SyntaxTree = {
-    @tailrec
-    def getUpdatedRoot(oldNode: Node, newNode: Node): Node =
-      parentOf.get(oldNode) match {
-        case None => newNode // replacing the root
-        case Some(parent) =>
-          val i = parent.children.indexOf(oldNode)
-          val updatedChildren = parent.children.patch(i, List(newNode), 1)
-          val updatedParent = new Node(parent.label, updatedChildren)
-          getUpdatedRoot(parent, updatedParent)
-      }
+    if (oldNode != root && !parentOf.contains(oldNode)) this
+    else {
+      @tailrec
+      def getUpdatedRoot(oldNode: Node, newNode: Node): Node =
+        parentOf.get(oldNode) match {
+          case None => newNode // replacing the root
+          case Some(parent) =>
+            val i = parent.children.indexOf(oldNode)
+            val updatedChildren = parent.children.patch(i, List(newNode), 1)
+            val updatedParent = new Node(parent.label, updatedChildren)
+            getUpdatedRoot(parent, updatedParent)
+        }
 
-    val updatedRoot = getUpdatedRoot(oldNode, newNode)
-    new SyntaxTree(updatedRoot)
+      val updatedRoot = getUpdatedRoot(oldNode, newNode)
+      new SyntaxTree(updatedRoot)
+    }
   }
 
   override lazy val toString: String = "( " + root.toString + " )"
