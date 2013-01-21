@@ -96,22 +96,17 @@ class TransformationSuite extends FunSuite {
       "( (VP (PP (VB fly) (IN to) (NP Beijing)) (PP (IN on) (NP the 2nd))) )")
     assert(DemoteTrans("VP", "PP", "PP", Left)(tree).get.toString ===
       "( (VP (VB fly) (PP (IN to) (NP Beijing) (PP (IN on) (NP the 2nd)))) )")
-    assert(DemoteTrans("PP", "IN", "NP", Left)(tree).get.toString ===
-      "( (VP (VB fly) (PP (IN to (NP Beijing))) (PP (IN on (NP the 2nd)))) )")
-    assert(DemoteTrans("PP", "NP", "IN", Right)(tree).get.toString ===
-      "( (VP (VB fly) (PP (NP (IN to) Beijing)) (PP (NP (IN on) the 2nd))) )")
+    assert(DemoteTrans("PP", "IN", "NP", Left)(tree).isEmpty)
+    assert(DemoteTrans("PP", "NP", "IN", Right)(tree).isEmpty)
     assert(DemoteTrans("NP", "the", "2nd", Left)(tree).isEmpty)
   }
 
   test("extract demote transformations") {
     val tree = SyntaxTree.parse("( (VP (VB fly) (PP (IN to) (NP Beijing)) (PP (IN on) (NP the 2nd))) )")
     assert(DemoteTrans.extract(tree) === Set(
-      DemoteTrans("VP", "VB", "PP", Left),
-      DemoteTrans("VP", "PP", "VB", Right),
       DemoteTrans("VP", "PP", "PP", Left),
       DemoteTrans("VP", "PP", "PP", Right),
-      DemoteTrans("PP", "IN", "NP", Left),
-      DemoteTrans("PP", "NP", "IN", Right)
+      DemoteTrans("VP", "PP", "VB", Right)
     ))
   }
 

@@ -18,7 +18,7 @@ case class DemoteTrans(parentLabel: String,
           case Left => (children(i), children(i + 1))
           case Right => (children(i + 1), children(i))
         }
-        if !demoter.isLeaf &&
+        if !demoter.isLeaf && !demoter.isPos &&
           demoter.label == demoterLabel &&
           demoted.label == demotedLabel;
 
@@ -44,10 +44,10 @@ object DemoteTrans extends TransformationExtractor {
       l = parent.children(i);
       r = parent.children(i + 1)
     ) {
-      if (!l.isLeaf) {
+      if (!l.isLeaf && !l.isPos) {
         lst ::= DemoteTrans(parent.label, l.label, r.label, Left)
       }
-      if (!r.isLeaf) {
+      if (!r.isLeaf && !r.isPos) {
         lst ::= DemoteTrans(parent.label, r.label, l.label, Right)
       }
     }
