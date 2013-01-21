@@ -18,10 +18,9 @@ case class TransferTrans(grandparentLabel: String,
           case Left => grandparent.children(i) -> grandparent.children(i + 1)
           case Right => grandparent.children(i + 1) -> grandparent.children(i)
         }
-        if !aunt.isLeaf && !aunt.isPos &&
-          !parent.isLeaf && !parent.isPos &&
-          aunt.label == auntLabel &&
-          parent.label == parentLabel;
+        if !aunt.isLeaf && aunt.label == auntLabel &&
+          !parent.isLeaf && parent.label == parentLabel &&
+          !aunt.isPos && !parent.isPos;
 
         target = direction match {
           case Left => parent.children.head
@@ -51,11 +50,11 @@ case class TransferTrans(grandparentLabel: String,
           }
         };
 
-        updatedGrandParent = {
+        updatedGrandparent = {
           val updatedChildren = grandparent.children.patch(i, patch, 2)
           new Node(grandparent.label, updatedChildren)
         }
-      ) yield updatedGrandParent
+      ) yield updatedGrandparent
     }.toIterable.headOption
   }
 }

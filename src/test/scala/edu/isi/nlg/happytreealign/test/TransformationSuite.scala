@@ -112,8 +112,11 @@ class TransformationSuite extends FunSuite {
 
   test("apply transfer transformation") {
     val tree = SyntaxTree.parse("( (NP (NP (JJ serious) (NNS consequences)) (SBAR (WHNP that) (S cause losses))) )")
-    assert(TransferTrans("NP", "NP", "SBAR", "WHNP", Left)(tree).get.toString ===
+    val newTree = TransferTrans("NP", "NP", "SBAR", "WHNP", Left)(tree).get
+    assert(newTree.toString ===
       "( (NP (NP (JJ serious) (NNS consequences) (WHNP that)) (SBAR (S cause losses))) )")
+    assert(TransferTrans("NP", "NP", "SBAR", "S", Left)(newTree).get.toString ===
+      "( (NP (NP (JJ serious) (NNS consequences) (WHNP that) (S cause losses))) )")
     assert(TransferTrans("NP", "SBAR", "NP", "NNS", Right)(tree).get.toString ===
       "( (NP (NP (JJ serious)) (SBAR (NNS consequences) (WHNP that) (S cause losses))) )")
     assert(TransferTrans("NP", "JJ", "NNS", "consequences", Left)(tree).isEmpty)
@@ -125,6 +128,25 @@ class TransformationSuite extends FunSuite {
     assert(TransferTrans.extract(tree) === Set(
       TransferTrans("NP", "NP", "SBAR", "WHNP", Left),
       TransferTrans("NP", "SBAR", "NP", "NNS", Right)
+    ))
+  }
+
+  test("apply adopt transformation") {
+    val tree = SyntaxTree.parse("( (S (NP Sabor) (ADVP (RB also)) (VP (VBD tied) (PP with Setangon))) )")
+    assert(AdoptTrans("S", "VP", "ADVP", "RB", Right)(tree).get.toString ===
+      "( (S (NP Sabor) (RB+VP (RB also) (VP (VBD tied) (PP with Setangon)))) )")
+    assert(AdoptTrans("S", "ADVP", "VP", "VBD", Left)(tree).get.toString ===
+      "( (S (NP Sabor) (ADVP+VBD (ADVP (RB also)) (VBD tied)) (VP (PP with Setangon))) )")
+    assert(AdoptTrans("VP", "VBD", "PP", "with", Left)(tree).isEmpty)
+    assert(AdoptTrans("S", "ADVP", "NP", "Sabor", Right)(tree).isEmpty)
+  }
+
+  test("extract adopt transformations") {
+    val tree = SyntaxTree.parse("( (S (NP Sabor) (ADVP (RB also)) (VP (VBD tied) (PP with Setangon))) )")
+    assert(AdoptTrans.extract(tree) === Set(
+      AdoptTrans("S", "NP", "ADVP", "RB", Left),
+      AdoptTrans("S", "ADVP", "VP", "VBD", Left),
+      AdoptTrans("S", "VP", "ADVP", "RB", Right)
     ))
   }
 }
