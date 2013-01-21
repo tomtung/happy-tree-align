@@ -1,13 +1,14 @@
-package edu.isi.nlg.happytreealign
+package edu.isi.nlg.happytreealign.trans
 
-import Direction._
 import edu.isi.nlg.happytreealign.SyntaxTree.Node
+import edu.isi.nlg.happytreealign.Direction._
+import edu.isi.nlg.happytreealign.{TransformationExtractor, Transformation}
 
-case class AdoptTrans(grandparentLabel: String,
-                      auntLabel: String,
-                      parentLabel: String,
-                      targetLabel: String,
-                      direction: Direction) extends Transformation {
+case class Adopt(grandparentLabel: String,
+                 auntLabel: String,
+                 parentLabel: String,
+                 targetLabel: String,
+                 direction: Direction) extends Transformation {
   protected def applyOnAnchorNode(grandparent: Node): Option[Node] = {
     if (grandparent.children.length < 2 || grandparent.label != grandparentLabel) None
     else {
@@ -56,19 +57,19 @@ case class AdoptTrans(grandparentLabel: String,
   }
 }
 
-object AdoptTrans extends TransformationExtractor {
+object Adopt extends TransformationExtractor {
   protected def extractAtAnchorNode(grandparent: Node): TraversableOnce[Transformation] = {
-    var lst: List[AdoptTrans] = Nil
+    var lst: List[Adopt] = Nil
     for (
       i <- 0 until grandparent.children.length - 1;
       l = grandparent.children(i);
       r = grandparent.children(i + 1)
     ) {
       if (!l.isLeaf && !l.isPos) {
-        lst ::= AdoptTrans(grandparent.label, r.label, l.label, l.children.last.label, Right)
+        lst ::= Adopt(grandparent.label, r.label, l.label, l.children.last.label, Right)
       }
       if (!r.isLeaf && !r.isPos) {
-        lst ::= AdoptTrans(grandparent.label, l.label, r.label, r.children.head.label, Left)
+        lst ::= Adopt(grandparent.label, l.label, r.label, r.children.head.label, Left)
       }
     }
 

@@ -1,9 +1,10 @@
-package edu.isi.nlg.happytreealign
+package edu.isi.nlg.happytreealign.trans
 
 import edu.isi.nlg.happytreealign.SyntaxTree.Node
-import Direction._
+import edu.isi.nlg.happytreealign.Direction._
+import edu.isi.nlg.happytreealign.{TransformationExtractor, Transformation}
 
-case class DemoteTrans(parentLabel: String,
+case class Demote(parentLabel: String,
                        demoterLabel: String,
                        demotedLabel: String,
                        direction: Direction) extends Transformation {
@@ -36,19 +37,19 @@ case class DemoteTrans(parentLabel: String,
   }
 }
 
-object DemoteTrans extends TransformationExtractor {
+object Demote extends TransformationExtractor {
   protected def extractAtAnchorNode(parent: Node): TraversableOnce[Transformation] = {
-    var lst: List[DemoteTrans] = Nil
+    var lst: List[Demote] = Nil
     for (
       i <- 0 until parent.children.length - 1;
       l = parent.children(i);
       r = parent.children(i + 1)
     ) {
       if (!l.isLeaf && !l.isPos) {
-        lst ::= DemoteTrans(parent.label, l.label, r.label, Left)
+        lst ::= Demote(parent.label, l.label, r.label, Left)
       }
       if (!r.isLeaf && !r.isPos) {
-        lst ::= DemoteTrans(parent.label, r.label, l.label, Right)
+        lst ::= Demote(parent.label, r.label, l.label, Right)
       }
     }
 

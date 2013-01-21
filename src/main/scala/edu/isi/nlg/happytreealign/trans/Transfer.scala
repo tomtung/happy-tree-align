@@ -1,9 +1,10 @@
-package edu.isi.nlg.happytreealign
+package edu.isi.nlg.happytreealign.trans
 
 import edu.isi.nlg.happytreealign.SyntaxTree.Node
-import Direction._
+import edu.isi.nlg.happytreealign.Direction._
+import edu.isi.nlg.happytreealign.{TransformationExtractor, Transformation}
 
-case class TransferTrans(grandparentLabel: String,
+case class Transfer(grandparentLabel: String,
                          auntLabel: String,
                          parentLabel: String,
                          targetLabel: String,
@@ -59,15 +60,15 @@ case class TransferTrans(grandparentLabel: String,
   }
 }
 
-object TransferTrans extends TransformationExtractor {
+object Transfer extends TransformationExtractor {
   protected override def extractAtAnchorNode(grandparent: Node): TraversableOnce[Transformation] = {
     for (
       i <- (0 until grandparent.children.length - 1).iterator;
       (l, r) = (grandparent.children(i), grandparent.children(i + 1))
       if !l.isLeaf && !l.isPos && !r.isLeaf && !r.isPos;
 
-      lTrans = TransferTrans(grandparent.label, l.label, r.label, r.children.head.label, Left);
-      rTrans = TransferTrans(grandparent.label, r.label, l.label, l.children.last.label, Right);
+      lTrans = Transfer(grandparent.label, l.label, r.label, r.children.head.label, Left);
+      rTrans = Transfer(grandparent.label, r.label, l.label, l.children.last.label, Right);
 
       trans <- List(lTrans, rTrans)
     ) yield trans

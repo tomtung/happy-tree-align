@@ -1,13 +1,14 @@
-package edu.isi.nlg.happytreealign
+package edu.isi.nlg.happytreealign.trans
 
-import SyntaxTree.Node
+import edu.isi.nlg.happytreealign.{Transformation, TransformationExtractor}
+import edu.isi.nlg.happytreealign.SyntaxTree.Node
 
-case class ArticulateTrans(parentLabel: String,
-                           leftLabel: String,
-                           rightLabel: String) extends Transformation {
+case class Articulate(parentLabel: String,
+                      leftLabel: String,
+                      rightLabel: String) extends Transformation {
 
   override protected def applyOnAnchorNode(parent: Node): Option[Node] = {
-    import ArticulateTrans._
+    import Articulate._
 
     if (parent.isLeaf || parent.label != parentLabel || parent.isPos || freshlyArticulated(parent))
       return None
@@ -41,7 +42,7 @@ case class ArticulateTrans(parentLabel: String,
   }
 }
 
-object ArticulateTrans extends TransformationExtractor {
+object Articulate extends TransformationExtractor {
 
   private def createMergedLabel(left: Node, right: Node): String = left.label + "+" + right.label
 
@@ -59,7 +60,7 @@ object ArticulateTrans extends TransformationExtractor {
       for (
         (l, r) <- chIter zip chIter.drop(1)
         if !l.isMerged && !r.isMerged
-      ) yield ArticulateTrans(parent.label, l.label, r.label)
+      ) yield Articulate(parent.label, l.label, r.label)
     }
   }
 }

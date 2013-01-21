@@ -1,9 +1,10 @@
-package edu.isi.nlg.happytreealign
+package edu.isi.nlg.happytreealign.trans
 
 import edu.isi.nlg.happytreealign.SyntaxTree.Node
-import Direction._
+import edu.isi.nlg.happytreealign.Direction._
+import edu.isi.nlg.happytreealign.{TransformationExtractor, Transformation}
 
-case class FlattenTrans(parentLabel: String,
+case class Flatten(parentLabel: String,
                         targetLabel: String,
                         siblingLabelAndDirection: Option[(String, Direction)] = None) extends Transformation {
   override protected def applyOnAnchorNode(parent: Node): Option[Node] = {
@@ -32,11 +33,11 @@ case class FlattenTrans(parentLabel: String,
   }
 }
 
-object FlattenTrans extends TransformationExtractor {
+object Flatten extends TransformationExtractor {
   override protected def extractAtAnchorNode(parent: Node): TraversableOnce[Transformation] = {
-    def extractAtTargetPos(i: Int): List[FlattenTrans] = {
+    def extractAtTargetPos(i: Int): List[Flatten] = {
       val target = parent.children(i)
-      val trans = FlattenTrans(parent.label, target.label)
+      val trans = Flatten(parent.label, target.label)
 
       trans :: List(i - 1 -> Right, i + 1 -> Left).filter({
         case (j, _) =>
