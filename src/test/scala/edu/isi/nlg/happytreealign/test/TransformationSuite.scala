@@ -135,8 +135,10 @@ class TransformationSuite extends FunSuite {
     val tree = SyntaxTree.parse("( (S (NP Sabor) (ADVP (RB also)) (VP (VBD tied) (PP with Setangon))) )")
     assert(Adopt("S", "VP", "ADVP", "RB", Right)(tree).get.toString ===
       "( (S (NP Sabor) (RB+VP (RB also) (VP (VBD tied) (PP with Setangon)))) )")
-    assert(Adopt("S", "ADVP", "VP", "VBD", Left)(tree).get.toString ===
+    val newTree = Adopt("S", "ADVP", "VP", "VBD", Left)(tree).get
+    assert(newTree.toString ===
       "( (S (NP Sabor) (ADVP+VBD (ADVP (RB also)) (VBD tied)) (VP (PP with Setangon))) )")
+    assert(Adopt("S", "ADVP+VBD", "VP", "PP", Left)(newTree).isEmpty)
     assert(Adopt("VP", "VBD", "PP", "with", Left)(tree).isEmpty)
     assert(Adopt("S", "ADVP", "NP", "Sabor", Right)(tree).isEmpty)
   }
@@ -147,6 +149,13 @@ class TransformationSuite extends FunSuite {
       Adopt("S", "NP", "ADVP", "RB", Left),
       Adopt("S", "ADVP", "VP", "VBD", Left),
       Adopt("S", "VP", "ADVP", "RB", Right)
+    ))
+
+    val newTree = Adopt("S", "ADVP", "VP", "VBD", Left)(tree).get
+    assert(Adopt.extract(newTree) === Set(
+      Adopt("S", "NP", "ADVP+VBD", "ADVP", Left),
+      Adopt("S", "VP", "ADVP+VBD", "VBD", Right),
+      Adopt("ADVP+VBD", "VBD", "ADVP", "RB", Right)
     ))
   }
 }

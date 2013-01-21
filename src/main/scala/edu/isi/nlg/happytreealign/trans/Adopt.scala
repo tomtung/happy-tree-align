@@ -20,6 +20,7 @@ case class Adopt(grandparentLabel: String,
           case Right => grandparent.children(i + 1) -> grandparent.children(i)
         }
         if !parent.isLeaf &&
+          !aunt.isMerged &&
           aunt.label == auntLabel &&
           parent.label == parentLabel &&
           !parent.isPos;
@@ -28,7 +29,7 @@ case class Adopt(grandparentLabel: String,
           case Left => parent.children.head
           case Right => parent.children.last
         }
-        if target.label == targetLabel;
+        if !target.isMerged && target.label == targetLabel;
 
         mergedNode = direction match {
           case Left => new Node(aunt.label + "+" + target.label, Vector(aunt, target), isMerged = true)
@@ -65,11 +66,19 @@ object Adopt extends TransformationExtractor {
       l = grandparent.children(i);
       r = grandparent.children(i + 1)
     ) {
-      if (!l.isLeaf && !l.isPos) {
-        lst ::= Adopt(grandparent.label, r.label, l.label, l.children.last.label, Right)
+      if (!r.isMerged && !l.isLeaf && !l.children.last.isMerged && !l.isPos) {
+        lst ::= Adopt(grandparent.label,
+          auntLabel = r.label,
+          parentLabel = l.label,
+          targetLabel = l.children.last.label,
+          direction = Right)
       }
-      if (!r.isLeaf && !r.isPos) {
-        lst ::= Adopt(grandparent.label, l.label, r.label, r.children.head.label, Left)
+      if (!l.isMerged && !r.isLeaf && !r.children.head.isMerged && !r.isPos) {
+        lst ::= Adopt(grandparent.label,
+          auntLabel = l.label,
+          parentLabel = r.label,
+          targetLabel = r.children.head.label,
+          direction = Left)
       }
     }
 
