@@ -137,4 +137,38 @@ class TransformationSuite extends FunSuite {
       DemoteTrans("PP", "NP", "IN", Right)
     ))
   }
+
+  test("apply transfer transformation") {
+    val tree = SyntaxTree.parse("( (NP (NP (JJ serious) (NNS consequences)) (SBAR (WHNP that) (S cause losses))) )")
+    assert(TransferTrans("NP", "NP", "SBAR", "WHNP", Left)(tree).get.toString ===
+      "( (NP (NP (JJ serious) (NNS consequences) (WHNP that)) (SBAR (S cause losses))) )")
+    assert(TransferTrans("NP", "SBAR", "NP", "NNS", Right)(tree).get.toString ===
+      "( (NP (NP (JJ serious)) (SBAR (NNS consequences) (WHNP that) (S cause losses))) )")
+    assert(TransferTrans("NP", "JJ", "NNS", "consequences", Left)(tree).get.toString ===
+      "( (NP (NP (JJ serious consequences)) (SBAR (WHNP that) (S cause losses))) )")
+    assert(TransferTrans("NP", "NNS", "JJ", "serious", Right)(tree).get.toString ===
+      "( (NP (NP (NNS serious consequences)) (SBAR (WHNP that) (S cause losses))) )")
+  }
+
+  test("apply transfer transformation (fail to apply)") {
+    val tree1 = SyntaxTree.parse("( (NP (NP serious (NNS consequences)) (SBAR (WHNP that) (S cause losses))) )")
+    assert(TransferTrans("NP", "serious", "NNS", "consequences", Left)(tree1).isEmpty)
+    assert(TransferTrans("NP", "serious", "NNS", "consequences", Right)(tree1).isEmpty)
+
+    val tree2 = SyntaxTree.parse("( (NP (NP (JJ serious) consequences) (SBAR (WHNP that) (S cause losses))) )")
+    assert(TransferTrans("NP", "consequences", "JJ", "serious", Right)(tree2).isEmpty)
+    assert(TransferTrans("NP", "consequences", "JJ", "serious", Left)(tree2).isEmpty)
+  }
+
+  test("extract transfer transformations") {
+    val tree = SyntaxTree.parse("( (NP (NP (JJ serious) (NNS consequences)) (SBAR (WHNP that) (S cause losses))) )")
+    assert(TransferTrans.extract(tree) === Set(
+      TransferTrans("NP", "NP", "SBAR", "WHNP", Left),
+      TransferTrans("NP", "SBAR", "NP", "NNS", Right),
+      TransferTrans("NP", "JJ", "NNS", "consequences", Left),
+      TransferTrans("NP", "NNS", "JJ", "serious", Right),
+      TransferTrans("SBAR", "WHNP", "S", "cause", Left),
+      TransferTrans("SBAR", "S", "WHNP", "that", Right)
+    ))
+  }
 }
