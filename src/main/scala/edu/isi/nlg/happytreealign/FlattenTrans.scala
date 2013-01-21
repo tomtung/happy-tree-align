@@ -14,7 +14,9 @@ case class FlattenTrans(parentLabel: String,
         i <- (0 until children.length).iterator;
 
         target = children(i)
-        if target.label == targetLabel && target.children.length == 2 &&
+        if target.children.length == 2 &&
+          !target.isPos &&
+          target.label == targetLabel &&
           ((siblingLabelAndDirection: @unchecked) match {
             case None => true
             case Some((siblingLabel, Right)) =>
@@ -49,7 +51,7 @@ object FlattenTrans extends TransformationExtractor {
 
     for (
       (target, tPos) <- parent.children.iterator.zipWithIndex
-      if (target.children.length == 2);
+      if target.children.length == 2 && !target.isPos;
       trans <- extractAtTargetPos(tPos)
     ) yield trans
   }
