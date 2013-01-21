@@ -9,57 +9,68 @@ case class TransferTrans(grandparentLabel: String,
                          targetLabel: String,
                          direction: Direction) extends Transformation {
   protected override def applyOnAnchorNode(grandparent: Node): Option[Node] = {
-    if (grandparent.isLeaf ||
-      grandparent.children.length != 2 ||
-      grandparent.label != grandparentLabel ||
-      grandparent.children.exists(_.isLeaf))
-      return None
+    if (grandparent.children.length < 2 || grandparent.label != grandparentLabel) None
+    else {
+      for (
+        i <- (0 until grandparent.children.length - 1).iterator;
 
-    val (parent, target, aunt) = direction match {
-      case Left =>
-        (grandparent.children(1), grandparent.children(1).children.head, grandparent.children(0))
-      case Right =>
-        (grandparent.children(0), grandparent.children(0).children.last, grandparent.children(1))
-    }
-
-    if (parent.label != parentLabel ||
-      aunt.label != auntLabel ||
-      target.label != targetLabel)
-      return None
-
-    val updatedChildren = direction match {
-      case Left =>
-        val updatedAunt = new Node(aunt.label, aunt.children :+ target)
-        if (parent.children.length == 1) Vector(updatedAunt)
-        else {
-          val updatedParent = new Node(parent.label, parent.children.drop(1))
-          Vector(updatedAunt, updatedParent)
+        (aunt, parent) = direction match {
+          case Left => grandparent.children(i) -> grandparent.children(i + 1)
+          case Right => grandparent.children(i + 1) -> grandparent.children(i)
         }
-      case Right =>
-        val updatedAunt = new Node(aunt.label, target +: aunt.children)
-        if (parent.children.length == 1) Vector(updatedAunt)
-        else {
-          val updatedParent = new Node(parent.label, parent.children.dropRight(1))
-          Vector(updatedParent, updatedAunt)
-        }
-    }
+        if !aunt.isLeaf && !aunt.isPos &&
+          !parent.isLeaf && !parent.isPos &&
+          aunt.label == auntLabel &&
+          parent.label == parentLabel;
 
-    Some(new Node(grandparent.label, updatedChildren))
+        target = direction match {
+          case Left => parent.children.head
+          case Right => parent.children.last
+        }
+        if target.label == targetLabel;
+
+        updatedAunt = {
+          val updatedChildren = direction match {
+            case Left => aunt.children :+ target
+            case Right => target +: aunt.children
+          }
+
+          new Node(aunt.label, updatedChildren)
+        };
+
+        patch = {
+          direction match {
+            case _ if parent.children.length == 1 =>
+              List(updatedAunt)
+            case Left =>
+              val updatedParent = new Node(parent.label, parent.children.drop(1))
+              List(updatedAunt, updatedParent)
+            case Right =>
+              val updatedParent = new Node(parent.label, parent.children.dropRight(1))
+              List(updatedParent, updatedAunt)
+          }
+        };
+
+        updatedGrandParent = {
+          val updatedChildren = grandparent.children.patch(i, patch, 2)
+          new Node(grandparent.label, updatedChildren)
+        }
+      ) yield updatedGrandParent
+    }.toIterable.headOption
   }
 }
 
 object TransferTrans extends TransformationExtractor {
   protected override def extractAtAnchorNode(grandparent: Node): TraversableOnce[Transformation] = {
-    var lst: List[Transformation] = Nil
+    for (
+      i <- (0 until grandparent.children.length - 1).iterator;
+      (l, r) = (grandparent.children(i), grandparent.children(i + 1))
+      if !l.isLeaf && !l.isPos && !r.isLeaf && !r.isPos;
 
-    if (grandparent.children.length == 2 &&
-      !grandparent.children.exists(_.isLeaf)) {
-      val (l, r) = (grandparent.children(0), grandparent.children(1))
-      lst =
-        TransferTrans(grandparent.label, l.label, r.label, r.children.head.label, Left) ::
-        TransferTrans(grandparent.label, r.label, l.label, l.children.last.label, Right) :: lst
-    }
+      lTrans = TransferTrans(grandparent.label, l.label, r.label, r.children.head.label, Left);
+      rTrans = TransferTrans(grandparent.label, r.label, l.label, l.children.last.label, Right);
 
-    lst
+      trans <- List(lTrans, rTrans)
+    ) yield trans
   }
 }
