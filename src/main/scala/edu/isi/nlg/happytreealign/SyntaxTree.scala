@@ -70,6 +70,8 @@ object SyntaxTree {
              val isMerged: Boolean = false) {
     def isLeaf = children.isEmpty
 
+    lazy val isPos = !isLeaf && children.forall(_.isLeaf)
+
     override lazy val toString: String = {
       if (children.isEmpty) label
       else "(%s %s)".format(label, children.iterator.map(_.toString).mkString(" "))

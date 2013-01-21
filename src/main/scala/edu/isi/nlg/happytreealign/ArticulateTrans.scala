@@ -9,7 +9,7 @@ case class ArticulateTrans(parentLabel: String,
   override protected def applyOnAnchorNode(parent: Node): Option[Node] = {
     import ArticulateTrans._
 
-    if (parent.isLeaf || parent.label != parentLabel || freshlyArticulated(parent))
+    if (parent.isLeaf || parent.isPos || parent.label != parentLabel || freshlyArticulated(parent))
       return None
 
     val children = parent.children
@@ -53,7 +53,7 @@ object ArticulateTrans extends TransformationExtractor {
     }
 
   override protected def extractAtAnchorNode(parent: Node): TraversableOnce[Transformation] = {
-    if (parent.children.length < 2 || freshlyArticulated(parent)) Traversable.empty
+    if (parent.children.length < 2 || parent.isPos || freshlyArticulated(parent)) Traversable.empty
     else {
       def chIter = parent.children.iterator
       for (

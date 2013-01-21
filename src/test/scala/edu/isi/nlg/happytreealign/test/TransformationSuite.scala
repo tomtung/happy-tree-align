@@ -6,40 +6,30 @@ import Direction._
 import scala.Some
 
 class TransformationSuite extends FunSuite {
-  test("apply articulate transformation (example in original paper)") {
-    val tree = SyntaxTree.parse("( (S (NP Other members) (VP will arrive in two groups) (. .)) )")
-    val newTree = ArticulateTrans(parentLabel = "S", leftLabel = "NP", rightLabel = "VP")(tree).get
+  test("apply articulate transformation") {
+    val tree1 = SyntaxTree.parse("( (S (NP (DUMMY Other) members) (VP will (DUMMY arrive) in two groups) (. .)) )")
+    assert(ArticulateTrans(parentLabel = "S", leftLabel = "NP", rightLabel = "VP")(tree1).get.toString ===
+      "( (S (NP+VP (NP (DUMMY Other) members) (VP will (DUMMY arrive) in two groups)) (. .)) )")
 
-    assert(newTree.toString === "( (S (NP+VP (NP Other members) (VP will arrive in two groups)) (. .)) )")
-  }
+    val tree2 = SyntaxTree.parse("( (a (a (b x) (c x) x) b c) )")
+    val newTree2 = ArticulateTrans("a", "b", "c")(tree2).get
+    assert(newTree2.toString ===
+      "( (a (a (b+c (b x) (c x)) x) (b+c b c)) )")
 
-  test("apply articulate transformation (test for exhaustion)") {
-    val tree = SyntaxTree.parse("( (a (b x) (c (a b c)) x b c) )")
-    val newTree = ArticulateTrans(parentLabel = "a", leftLabel = "b", rightLabel = "c")(tree).get
+    assert(ArticulateTrans("a+b", "a", "b")(newTree2).isEmpty)
 
-    assert(newTree.toString === "( (a (b+c (b x) (c (a (b+c b c)))) x (b+c b c)) )")
-  }
-
-  test("apply articulate transformation (fail to apply)") {
-    val articulate = ArticulateTrans(parentLabel = "a", leftLabel = "b", rightLabel = "c")
-    val tree1 = SyntaxTree.parse("( (a (b x) (d (a b d)) x b d) )")
-    val newTree1Op = articulate(tree1)
-    assert(newTree1Op.isEmpty)
-
-    val tree2 = articulate(SyntaxTree.parse("( (a (b x) (c (a b c)) x b c) )")).get
-    val newTree2Op = ArticulateTrans(parentLabel = "a+b", leftLabel = "a", rightLabel = "b")(tree2)
-    assert(newTree2Op.isEmpty)
+    val tree3 = SyntaxTree.parse("( (a b c) )")
+    assert(ArticulateTrans("a", "b", "c")(tree3).isEmpty)
   }
 
   test("extract articulate transformations") {
-    val tree = SyntaxTree.parse("( (a (b x) (c (a b c)) x b c) )")
+    val tree = SyntaxTree.parse("( (a (b x x x) (a b (a x)) c) )")
     assert(ArticulateTrans.extract(tree) === Set(
-      ArticulateTrans("a", "b", "c"),
-      ArticulateTrans("a", "c", "x"),
-      ArticulateTrans("a", "x", "b")
+      ArticulateTrans("a", "b", "a"),
+      ArticulateTrans("a", "a", "c")
     ))
 
-    val newTree = ArticulateTrans(parentLabel = "a", leftLabel = "b", rightLabel = "c")(tree).get
+    val newTree = ArticulateTrans(parentLabel = "a", leftLabel = "b", rightLabel = "a")(tree).get
     assert(ArticulateTrans.extract(newTree) === Set.empty)
   }
 
