@@ -9,7 +9,7 @@ case class ArticulateTrans(parentLabel: String,
   override protected def applyOnAnchorNode(parent: Node): Option[Node] = {
     import ArticulateTrans._
 
-    if (parent.isLeaf || parent.isPos || parent.label != parentLabel || freshlyArticulated(parent))
+    if (parent.isLeaf || parent.label != parentLabel || parent.isPos || freshlyArticulated(parent))
       return None
 
     val children = parent.children

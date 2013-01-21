@@ -64,31 +64,29 @@ class TransformationSuite extends FunSuite {
   }
 
   test("apply promote transformation") {
-    val tree1 = SyntaxTree.parse("( (PP (IN by) (NP (NP the French player) (NP1 N. Taugia))) )")
-    assert(
-      PromoteTrans("PP", "NP", "NP", Left)(tree1).get.toString ===
-        "( (PP (IN by) (NP the French player) (NP (NP1 N. Taugia))) )")
-
-    val tree2 = SyntaxTree.parse("( (PP (IN by) (NP (NP the French player) (NP N. Taugia))) )")
-    assert(
-      PromoteTrans("NP", "NP", "player", Right)(tree2).get.toString ===
-        "( (PP (IN by) (NP (NP the French) player (NP N. Taugia))) )")
-
-    val tree3 = SyntaxTree.parse("( (PP (IN by) (NP (NP the French player) (NP N. Taugia))) )")
-    assert(
-      PromoteTrans("PP", "NP", "NP", Left)(tree3).get.toString ===
-        "( (PP (IN by) (NP the French player) (NP N. Taugia)) )")
-
-    assert(PromoteTrans("PP", "NP", "NP", Right)(tree3).isEmpty)
+    val tree = SyntaxTree.parse("( (NP (NP (DT all) (JJ peacekeeping) (NNS forces)) (PP (IN of) (NP the UN))) )")
+    assert(PromoteTrans("NP", "NP", "DT", Left)(tree).get.toString ===
+      "( (NP (DT all) (NP (JJ peacekeeping) (NNS forces)) (PP (IN of) (NP the UN))) )")
+    assert(PromoteTrans("NP", "NP", "NNS", Right)(tree).get.toString ===
+      "( (NP (NP (DT all) (JJ peacekeeping)) (NNS forces) (PP (IN of) (NP the UN))) )")
+    val newTree = PromoteTrans("NP", "PP", "IN", Left)(tree).get
+    assert(newTree.toString ===
+      "( (NP (NP (DT all) (JJ peacekeeping) (NNS forces)) (IN of) (PP (NP the UN))) )")
+    assert(PromoteTrans("NP", "PP", "NP", Right)(newTree).get.toString ===
+      "( (NP (NP (DT all) (JJ peacekeeping) (NNS forces)) (IN of) (NP the UN)) )")
+    assert(PromoteTrans("NP", "PP", "NP", Right)(tree).get.toString ===
+      "( (NP (NP (DT all) (JJ peacekeeping) (NNS forces)) (PP (IN of)) (NP the UN)) )")
+    assert(PromoteTrans("NP", "JJ", "peacekeeping", Left)(tree).isEmpty)
+    assert(PromoteTrans("NP", "JJ", "peacekeeping", Right)(tree).isEmpty)
   }
 
   test("extract promote transformations") {
-    val tree = SyntaxTree.parse("( (PP (IN by) (NP (NP the French player) (NP N. Taugia))) )")
+    val tree = SyntaxTree.parse("( (NP (NP (DT all) (JJ peacekeeping) (NNS forces)) (PP (IN of) (NP the UN))) )")
     assert(PromoteTrans.extract(tree) === Set(
-      PromoteTrans("PP", "IN", "by", Right),
-      PromoteTrans("PP", "NP", "NP", Left),
-      PromoteTrans("NP", "NP", "player", Right),
-      PromoteTrans("NP", "NP", "N.", Left)
+      PromoteTrans("NP", "NP", "DT", Left),
+      PromoteTrans("NP", "NP", "NNS", Right),
+      PromoteTrans("NP", "PP", "IN", Left),
+      PromoteTrans("NP", "PP", "NP", Right)
     ))
   }
 
