@@ -1,25 +1,30 @@
 package edu.isi.nlg.happytreealign
 
-import collection.immutable.Queue
 import util.parsing.combinator.RegexParsers
 import SyntaxTree.Node
 import annotation.tailrec
+import collection.mutable
 
 class SyntaxTree(val root: Node) {
 
   lazy val (parentOf, spanOf) = {
+    val parentOfBuilder = Map.newBuilder[Node, Node]
+    val spanOfBuilder = Map.newBuilder[Node, NonEmptySpan]
+    val spanOf = mutable.Map[Node, NonEmptySpan]()
+    var leafCount = 0
+
     @tailrec
-    def build(nodes: List[Node],
-              parentOf: Map[Node, Node],
-              spanOf: Map[Node, NonEmptySpan],
-              leafCount: Int): (Map[Node, Node], Map[Node, NonEmptySpan]) =
+    def build(nodes: List[Node] = root.traversePostOrder): (Map[Node, Node], Map[Node, NonEmptySpan]) =
       nodes match {
         case Nil =>
-          (parentOf, spanOf)
+          (parentOfBuilder.result(), spanOfBuilder.result())
         case head :: tail =>
           if (head.isLeaf) {
             val span = NonEmptySpan(leafCount, leafCount)
-            build(tail, parentOf, spanOf + (head -> span), leafCount + 1)
+            spanOf += (head -> span)
+            spanOfBuilder += (head -> span)
+            leafCount += 1
+            build(tail)
           } else {
             val span = {
               val chSpans = head.children.map(spanOf)
@@ -27,11 +32,14 @@ class SyntaxTree(val root: Node) {
               val to = chSpans.maxBy(_.to).to
               NonEmptySpan(from, to)
             }
-            build(tail, parentOf ++ head.children.iterator.map(_ -> head), spanOf + (head -> span), leafCount)
+            parentOfBuilder ++= head.children.iterator.map(_ -> head)
+            spanOf += (head -> span)
+            spanOfBuilder += (head -> span)
+            build(tail)
           }
       }
 
-    build(root.traversePostOrder, Map.empty, Map.empty, 0)
+    build()
   }
 
 
@@ -78,47 +86,56 @@ object SyntaxTree {
     }
 
     lazy val traversePostOrder: List[Node] = {
+      val stack = mutable.Stack[(Node, Boolean)](this -> false)
+
       @tailrec
-      def doTraverse(stack: List[(Node, Boolean)], accu: List[Node]): List[Node] = {
-        stack match {
-          case Nil => accu.reverse
-          case (head, true) :: tail =>
-            doTraverse(tail, head :: accu)
-          case (head, false) :: tail =>
-            if (head.isLeaf)
-              doTraverse(tail, head :: accu)
-            else {
-              val nextNodes = head.children.iterator.map(_ -> false).toList
-              doTraverse(nextNodes ::: ((head, true) :: tail), accu)
-            }
+      def doTraverse(accu: List[Node] = Nil): List[Node] = {
+        if (stack.isEmpty) accu.reverse
+        else {
+          stack.pop() match {
+            case (head, true) =>
+              doTraverse(head :: accu)
+            case (head, false) if head.isLeaf =>
+              doTraverse(head :: accu)
+            case (head, false) =>
+              stack.push(head -> true)
+              stack.pushAll(head.children.reverseIterator.map(_ -> false))
+              doTraverse(accu)
+          }
         }
       }
 
-      doTraverse(List(this -> false), Nil)
+      doTraverse()
     }
 
     lazy val traverseBreadthFirst: List[Node] = {
+      val queue = mutable.Queue(this)
+
       @tailrec
-      def doTraverse(queue: Queue[Node], accu: List[Node]): List[Node] =
+      def doTraverse(accu: List[Node] = Nil): List[Node] =
         if (queue.isEmpty) accu.reverse
         else {
-          val (h, q) = queue.dequeue
-          doTraverse(q.enqueue(h.children), h :: accu)
+          val head = queue.dequeue()
+          head.children.foreach(queue.enqueue(_))
+          doTraverse(head :: accu)
         }
 
-      doTraverse(Queue(this), Nil)
+      doTraverse()
     }
 
     lazy val traverseLeftRightBottomUp: List[Node] = {
+      val queue = mutable.Queue[Node](this)
+
       @tailrec
-      def doTraverse(queue: Queue[Node], accu: List[Node]): List[Node] =
+      def doTraverse(accu: List[Node] = Nil): List[Node] =
         if (queue.isEmpty) accu
         else {
-          val (h, q) = queue.dequeue
-          doTraverse(q.enqueue(h.children.reverseIterator.toList), h :: accu)
+          val head = queue.dequeue()
+          head.children.reverseIterator.foreach(node => queue.enqueue(node))
+          doTraverse(head :: accu)
         }
 
-      doTraverse(Queue(this), Nil)
+      doTraverse()
     }
   }
 

@@ -106,7 +106,7 @@ object Main extends Logging {
               logger.info(s"Iteration $i:\t$trans\tTrain Score: $newTrainScore")
             case Some(devAlignTrees) =>
               devAlignTreesOp = Some(devAlignTrees.map(trans(_)))
-              val newDevScore = devAlignTreesOp.get.par.map(_.agreementScore).sum
+              val newDevScore = devAlignTreesOp.get.map(_.agreementScore).sum
               logger.info(s"Iteration $i:\t$trans\tTrain Score: $newTrainScore\tDev Score: $newDevScore")
           }
       }
