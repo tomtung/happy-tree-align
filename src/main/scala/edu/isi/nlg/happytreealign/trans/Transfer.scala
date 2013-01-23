@@ -4,10 +4,10 @@ import edu.isi.nlg.happytreealign.SyntaxTree.Node
 import edu.isi.nlg.happytreealign._
 
 case class Transfer(grandparentLabel: String,
-                         auntLabel: String,
-                         parentLabel: String,
-                         targetLabel: String,
-                         direction: Direction) extends Transformation {
+                    auntLabel: String,
+                    parentLabel: String,
+                    targetLabel: String,
+                    direction: Direction) extends Transformation {
   protected override def applyOnAnchorNode(grandparent: Node): Option[Node] = {
     if (grandparent.children.length < 2 || grandparent.label != grandparentLabel) None
     else {

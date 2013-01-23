@@ -4,9 +4,9 @@ import edu.isi.nlg.happytreealign.SyntaxTree.Node
 import edu.isi.nlg.happytreealign._
 
 case class Demote(parentLabel: String,
-                       demoterLabel: String,
-                       demotedLabel: String,
-                       direction: Direction) extends Transformation {
+                  demoterLabel: String,
+                  demotedLabel: String,
+                  direction: Direction) extends Transformation {
   override protected def applyOnAnchorNode(parent: Node): Option[Node] = {
     if (parent.children.length < 2 || parent.label != parentLabel) None
     else {

@@ -2,7 +2,7 @@ package edu.isi.nlg.happytreealign
 
 import com.typesafe.scalalogging.slf4j.Logging
 import com.thoughtworks.xstream.XStream
-import java.io.{OutputStreamWriter, PrintWriter, File}
+import java.io.{PrintWriter, File}
 
 object Main extends Logging {
 
@@ -104,7 +104,7 @@ object Main extends Logging {
           devAlignTreesOp match {
             case None =>
               logger.info(s"Iteration $i:\t$trans\tTrain Score: $newTrainScore")
-            case Some(devAlignTrees)=>
+            case Some(devAlignTrees) =>
               devAlignTreesOp = Some(devAlignTrees.map(trans(_)))
               val newDevScore = devAlignTreesOp.get.par.map(_.agreementScore).sum
               logger.info(s"Iteration $i:\t$trans\tTrain Score: $newTrainScore\tDev Score: $newDevScore")

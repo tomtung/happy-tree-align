@@ -4,8 +4,8 @@ import edu.isi.nlg.happytreealign.SyntaxTree.Node
 import edu.isi.nlg.happytreealign._
 
 case class Flatten(parentLabel: String,
-                        targetLabel: String,
-                        siblingLabelAndDirection: Option[(String, Direction)] = None) extends Transformation {
+                   targetLabel: String,
+                   siblingLabelAndDirection: Option[(String, Direction)] = None) extends Transformation {
   override protected def applyOnAnchorNode(parent: Node): Option[Node] = {
     if (parent.isLeaf || parent.label != parentLabel) None
     else {

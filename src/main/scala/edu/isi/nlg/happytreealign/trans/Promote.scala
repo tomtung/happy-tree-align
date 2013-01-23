@@ -4,9 +4,9 @@ import edu.isi.nlg.happytreealign.SyntaxTree.Node
 import edu.isi.nlg.happytreealign._
 
 case class Promote(grandparentLabel: String,
-                        parentLabel: String,
-                        childLabel: String,
-                        direction: Direction) extends Transformation {
+                   parentLabel: String,
+                   childLabel: String,
+                   direction: Direction) extends Transformation {
   override protected def applyOnAnchorNode(grandparent: Node): Option[Node] = {
     if (grandparent.isLeaf || grandparent.label != grandparentLabel)
       None
