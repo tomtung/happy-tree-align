@@ -13,6 +13,11 @@ class SyntaxTree(val root: Node) {
     val spanOf = mutable.Map[Node, NonEmptySpan]()
     var leafCount = 0
 
+    val nNodes = root.traversePostOrder.length
+    parentOfBuilder.sizeHint(nNodes)
+    spanOfBuilder.sizeHint(nNodes)
+    spanOf.sizeHint(nNodes)
+
     @tailrec
     def build(nodes: List[Node] = root.traversePostOrder): (Map[Node, Node], Map[Node, NonEmptySpan]) =
       nodes match {
@@ -87,20 +92,23 @@ object SyntaxTree {
 
     lazy val traversePostOrder: List[Node] = {
       val stack = mutable.Stack[(Node, Boolean)](this -> false)
+      val builder = List.newBuilder[Node]
 
       @tailrec
-      def doTraverse(accu: List[Node] = Nil): List[Node] = {
-        if (stack.isEmpty) accu.reverse
+      def doTraverse(): List[Node] = {
+        if (stack.isEmpty) builder.result()
         else {
           stack.pop() match {
             case (head, true) =>
-              doTraverse(head :: accu)
+              builder += head
+              doTraverse()
             case (head, false) if head.isLeaf =>
-              doTraverse(head :: accu)
+              builder += head
+              doTraverse()
             case (head, false) =>
               stack.push(head -> true)
               stack.pushAll(head.children.reverseIterator.map(_ -> false))
-              doTraverse(accu)
+              doTraverse()
           }
         }
       }
