@@ -15,3 +15,19 @@ class AlignmentTree(val syntaxTree: SyntaxTree, val alignment: WordPosAlignment)
   def isExtractable(eSpan: Span): Boolean =
     eSpan contains alignment.fSpanToESpan(alignment.eSpanToFSpan(eSpan))
 }
+
+object AlignmentTree {
+  def parseAlignmentTrees(syntaxTreeFile: String, alignmentFile: String): Iterator[AlignmentTree] = {
+    def syntaxTreeLines =
+      io.Source.fromFile(syntaxTreeFile, "UTF-8").getLines()
+    def alignmentLines =
+      io.Source.fromFile(alignmentFile, "UTF-8").getLines()
+
+    if (syntaxTreeLines.length != alignmentLines.length)
+      throw new ParsingException("Different number of syntax trees and word alignments")
+
+    (syntaxTreeLines.map(SyntaxTree.parse) zip alignmentLines.map(WordPosAlignment.parseFEPairs)).map({
+      case (tree, align) => new AlignmentTree(tree, align)
+    })
+  }
+}

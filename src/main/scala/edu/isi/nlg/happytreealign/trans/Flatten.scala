@@ -1,8 +1,7 @@
 package edu.isi.nlg.happytreealign.trans
 
 import edu.isi.nlg.happytreealign.SyntaxTree.Node
-import edu.isi.nlg.happytreealign.Direction._
-import edu.isi.nlg.happytreealign.{TransformationExtractor, Transformation}
+import edu.isi.nlg.happytreealign._
 
 case class Flatten(parentLabel: String,
                         targetLabel: String,
