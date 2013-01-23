@@ -3,6 +3,7 @@ package edu.isi.nlg.happytreealign
 import edu.isi.nlg.happytreealign.SyntaxTree.Node
 import trans._
 import com.typesafe.scalalogging.slf4j.Logging
+import collection.mutable
 
 trait TransformationExtractor {
   def extract(tree: SyntaxTree): Set[Transformation] = {
@@ -12,8 +13,7 @@ trait TransformationExtractor {
   }
 
   def extract(alignTree: AlignmentTree): Set[Transformation] =
-    extract(alignTree.syntaxTree).filter(
-      trans => trans(alignTree).agreementScore > alignTree.agreementScore)
+    extract(alignTree.syntaxTree)
 
   protected def extractAtAnchorNode(node: Node): TraversableOnce[Transformation]
 }
@@ -24,14 +24,26 @@ object TransformationExtractor extends TransformationExtractor with Logging {
   protected def extractAtAnchorNode(node: Node): TraversableOnce[Transformation] =
     extractors.iterator.flatMap(_.extractAtAnchorNode(node))
 
-  def findBestTransformation(alignTrees: Vector[AlignmentTree]): Option[(Transformation, Vector[AlignmentTree], Int)] =
-    alignTrees.par.map(extract).reduceOption(_ union _).map(candidateTrans => {
-      logger.trace("size of candidate transformation set: " + candidateTrans.size)
-      candidateTrans.par.map(
-        trans => {
-          val transformedTrees = alignTrees.map(trans(_))
-          val totalScore = transformedTrees.iterator.map(_.agreementScore).sum
-          (trans, transformedTrees, totalScore)
-        }).maxBy(_._3)
-    })
+  // TODO how to parallelize this?
+  def findBestTransformation(alignTrees: Vector[AlignmentTree]): Option[Transformation] = {
+    val transToScoreDiff = mutable.Map[Transformation, Int]().withDefaultValue(0)
+    transToScoreDiff.sizeHint(200 * alignTrees.size)
+
+    for (
+      alignTree <- alignTrees;
+      trans <- extract(alignTree).iterator;
+      newAlignTree = trans(alignTree);
+      scoreDiff = newAlignTree.agreementScore - alignTree.agreementScore
+      if scoreDiff != 0
+    ) {
+      transToScoreDiff(trans) += scoreDiff
+    }
+
+    if (transToScoreDiff.isEmpty) None
+    else {
+      val (bestTrans, bestDiff) = transToScoreDiff.maxBy(_._2)
+      if (bestDiff > 0) Some(bestTrans)
+      else None
+    }
+  }
 }

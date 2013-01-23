@@ -29,14 +29,16 @@ case class Promote(grandparentLabel: String,
           case _ if parent.children.length == 1 =>
             List(child)
           case Left =>
-            List(child, new Node(parent.label, parent.children.drop(1)))
+            val updatedParent = parent.childrenUpdated(parent.children.drop(1))
+            List(child, updatedParent)
           case Right =>
-            List(new Node(parent.label, parent.children.dropRight(1)), child)
+            val updatedParent = parent.childrenUpdated(parent.children.dropRight(1))
+            List(updatedParent, child)
         };
 
         updatedGrandparent = {
           val updatedChildren = grandparent.children.patch(i, patch, 1)
-          new Node(grandparent.label, updatedChildren)
+          grandparent.childrenUpdated(updatedChildren)
         }
       ) yield updatedGrandparent
     }.toIterable.headOption

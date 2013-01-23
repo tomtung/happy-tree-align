@@ -34,7 +34,7 @@ case class Transfer(grandparentLabel: String,
             case Right => target +: aunt.children
           }
 
-          new Node(aunt.label, updatedChildren)
+          aunt.childrenUpdated(updatedChildren)
         };
 
         patch = {
@@ -42,17 +42,17 @@ case class Transfer(grandparentLabel: String,
             case _ if parent.children.length == 1 =>
               List(updatedAunt)
             case Left =>
-              val updatedParent = new Node(parent.label, parent.children.drop(1))
+              val updatedParent = parent.childrenUpdated(parent.children.drop(1))
               List(updatedAunt, updatedParent)
             case Right =>
-              val updatedParent = new Node(parent.label, parent.children.dropRight(1))
+              val updatedParent = parent.childrenUpdated(parent.children.dropRight(1))
               List(updatedParent, updatedAunt)
           }
         };
 
         updatedGrandparent = {
           val updatedChildren = grandparent.children.patch(i, patch, 2)
-          new Node(grandparent.label, updatedChildren)
+          grandparent.childrenUpdated(updatedChildren)
         }
       ) yield updatedGrandparent
     }.toIterable.headOption

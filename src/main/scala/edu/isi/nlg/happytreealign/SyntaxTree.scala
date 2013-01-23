@@ -64,8 +64,7 @@ class SyntaxTree(val root: Node) {
           case Some(parent) =>
             val i = parent.children.indexOf(oldNode)
             val updatedChildren = parent.children.patch(i, List(newNode), 1)
-            val updatedParent = new Node(parent.label, updatedChildren)
-            getUpdatedRoot(parent, updatedParent)
+            getUpdatedRoot(parent, parent.childrenUpdated(updatedChildren))
         }
 
       val updatedRoot = getUpdatedRoot(oldNode, newNode)
@@ -82,6 +81,8 @@ object SyntaxTree {
              val children: Vector[Node] = Vector.empty[Node],
              val isMerged: Boolean = false) {
     def isLeaf = children.isEmpty
+
+    def childrenUpdated(updatedChildren: Vector[Node]) = new Node(label, updatedChildren, isMerged)
 
     lazy val isPos = !isLeaf && children.forall(_.isLeaf)
 

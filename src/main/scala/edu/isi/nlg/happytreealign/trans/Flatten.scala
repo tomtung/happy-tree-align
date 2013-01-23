@@ -26,7 +26,7 @@ case class Flatten(parentLabel: String,
           });
 
         updatedChildren = children.patch(i, target.children, 1);
-        updatedParent = new Node(parent.label, updatedChildren)
+        updatedParent = parent.childrenUpdated(updatedChildren)
       ) yield updatedParent
     }.toIterable.headOption
   }

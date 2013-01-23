@@ -29,12 +29,12 @@ case class Articulate(parentLabel: String,
       val mergedNode = {
         val mergedLabel = createMergedLabel(left, right)
         val mergedChildren = Vector(left, right)
-        new Node(mergedLabel, mergedChildren, true)
+        new Node(mergedLabel, mergedChildren, isMerged = true)
       }
 
       val updatedParent = {
         val updatedChildren = children.patch(i, List(mergedNode), 2)
-        new Node(parent.label, updatedChildren)
+        parent.childrenUpdated(updatedChildren)
       }
 
       updatedParent

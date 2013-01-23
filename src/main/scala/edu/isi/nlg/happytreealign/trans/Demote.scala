@@ -23,14 +23,14 @@ case class Demote(parentLabel: String,
           demoted.label == demotedLabel;
 
         updatedDemoter = {
-          val updatedDemoterChildren = direction match {
+          val updatedChildren = direction match {
             case Left => demoter.children :+ demoted
             case Right => demoted +: demoter.children
           }
-          new Node(demoter.label, updatedDemoterChildren)
+          demoter.childrenUpdated(updatedChildren)
         };
 
-        updatedParent = new Node(parent.label, parent.children.patch(i, List(updatedDemoter), 2))
+        updatedParent = parent.childrenUpdated(parent.children.patch(i, List(updatedDemoter), 2))
       ) yield updatedParent
     }.toIterable.headOption
   }

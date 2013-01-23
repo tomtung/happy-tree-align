@@ -3,6 +3,8 @@ package edu.isi.nlg.happytreealign
 import com.typesafe.scalalogging.slf4j.Logging
 import com.thoughtworks.xstream.XStream
 import java.io.{PrintWriter, File}
+import java.util
+import collection.JavaConversions._
 
 object Main extends Logging {
 
@@ -23,10 +25,10 @@ object Main extends Logging {
       arg("<align.train>", "path to training alignment file") {
         (s, c) => c.copy(trainAlignPath = s)
       },
-      argOpt("<tree.dev>", "path to dev tree file") {
+      argOpt("<tree.dev>", "optional, path to dev tree file") {
         (s, c) => c.copy(devTreePath = Some(s))
       },
-      argOpt("<align.dev>", "path to dev alignment file") {
+      argOpt("<align.dev>", "optional, path to dev alignment file") {
         (s, c) => c.copy(devAlignPath = Some(s))
       },
       intOpt("n", "n-iter", s"max number of transformations to learn (default $defaultNIter)") {
@@ -91,24 +93,29 @@ object Main extends Logging {
         learnConfigParser.showUsage
         sys.exit(1)
     }
-    var bestTransSeq = Vector[Transformation]()
+
+    val bestTrans = new util.ArrayList[Transformation](config.nIter)
 
     logger.trace("start")
-    for (i <- 0 until config.nIter) {
-      TransformationExtractor.findBestTransformation(trainAlignTrees) match {
-        case None => sys.exit(0)
-        case Some((trans, newTrainAlignTrees, newTrainScore)) =>
-          bestTransSeq :+= trans
+    for (
+      i <- (1 to config.nIter).iterator;
+      transOp = TransformationExtractor.findBestTransformation(trainAlignTrees)
+      if transOp.isDefined;
+      trans = transOp.get
+    ) {
+      bestTrans.add(trans)
 
-          trainAlignTrees = newTrainAlignTrees
-          devAlignTreesOp match {
-            case None =>
-              logger.info(s"Iteration $i:\t$trans\tTrain Score: $newTrainScore")
-            case Some(devAlignTrees) =>
-              devAlignTreesOp = Some(devAlignTrees.map(trans(_)))
-              val newDevScore = devAlignTreesOp.get.map(_.agreementScore).sum
-              logger.info(s"Iteration $i:\t$trans\tTrain Score: $newTrainScore\tDev Score: $newDevScore")
-          }
+      trainAlignTrees = trainAlignTrees.map(trans(_))
+      val newTrainScore = trainAlignTrees.iterator.map(_.agreementScore).sum
+
+      devAlignTreesOp match {
+        case None =>
+          logger.info(s"Iteration $i:\t$trans\tTrain Score: $newTrainScore")
+
+        case Some(devAlignTrees) =>
+          devAlignTreesOp = Some(devAlignTrees.map(trans(_)))
+          val newDevScore = devAlignTreesOp.get.map(_.agreementScore).sum
+          logger.info(s"Iteration $i:\t$trans\tTrain Score: $newTrainScore\tDev Score: $newDevScore")
       }
     }
 
@@ -117,15 +124,17 @@ object Main extends Logging {
     config.outPath match {
       case Some(outPath) =>
         val writer = new PrintWriter(outPath, "UTF-8")
-        xStream.toXML(bestTransSeq.toArray, writer)
+        xStream.toXML(bestTrans, writer)
         writer.close()
       case None =>
-        println(xStream.toXML(bestTransSeq.toArray))
+        println(xStream.toXML(bestTrans))
     }
   }
 
   def getXStream(): XStream = {
     val xStream = new XStream()
+
+    xStream.setMode(XStream.NO_REFERENCES)
 
     xStream.alias("Optional", classOf[Option[(String, Direction)]])
     xStream.alias("Some", classOf[Some[(String, Direction)]])
@@ -153,7 +162,8 @@ object Main extends Logging {
     }
 
     val transformations = {
-      val array = getXStream().fromXML(new File(config.transPath)).asInstanceOf[Array[Transformation]]
+      val array =
+        getXStream().fromXML(new File(config.transPath)).asInstanceOf[util.ArrayList[Transformation]]
       config.nTrans match {
         case Some(nTrans) =>
           array.toVector.take(nTrans)

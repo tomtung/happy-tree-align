@@ -40,17 +40,17 @@ case class Adopt(grandparentLabel: String,
             case _ if parent.children.length == 1 =>
               List(mergedNode)
             case Left =>
-              val updatedParent = new Node(parent.label, parent.children.drop(1))
+              val updatedParent = parent.childrenUpdated(parent.children.drop(1))
               List(mergedNode, updatedParent)
             case Right =>
-              val updatedParent = new Node(parent.label, parent.children.dropRight(1))
+              val updatedParent = parent.childrenUpdated(parent.children.dropRight(1))
               List(updatedParent, mergedNode)
           }
         };
 
         updatedGrandparent = {
           val updatedChildren = grandparent.children.patch(i, patch, 2)
-          new Node(grandparent.label, updatedChildren)
+          grandparent.childrenUpdated(updatedChildren)
         }
       ) yield updatedGrandparent
     }.toIterable.headOption
