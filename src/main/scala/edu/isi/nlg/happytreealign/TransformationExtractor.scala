@@ -3,7 +3,7 @@ package edu.isi.nlg.happytreealign
 import edu.isi.nlg.happytreealign.SyntaxTree.Node
 import trans._
 import com.typesafe.scalalogging.slf4j.Logging
-import collection.mutable
+import collection.parallel.immutable.ParVector
 
 trait TransformationExtractor {
   def extract(tree: SyntaxTree): Set[Transformation] = {
@@ -11,9 +11,6 @@ trait TransformationExtractor {
       flatMap(extractAtAnchorNode).
       toSet
   }
-
-  def extract(alignTree: AlignmentTree): Set[Transformation] =
-    extract(alignTree.syntaxTree)
 
   protected def extractAtAnchorNode(node: Node): TraversableOnce[Transformation]
 }
@@ -24,20 +21,10 @@ object TransformationExtractor extends TransformationExtractor with Logging {
   protected def extractAtAnchorNode(node: Node): TraversableOnce[Transformation] =
     extractors.iterator.flatMap(_.extractAtAnchorNode(node))
 
-  // TODO how to parallelize this?
-  def findBestTransformation(alignTrees: Vector[AlignmentTree]): Option[Transformation] = {
-    val transToScoreDiff = mutable.Map[Transformation, Int]().withDefaultValue(0)
-    transToScoreDiff.sizeHint(200 * alignTrees.size)
-
-    for (
-      alignTree <- alignTrees;
-      trans <- extract(alignTree).iterator;
-      newAlignTree = trans(alignTree);
-      scoreDiff = newAlignTree.agreementScore - alignTree.agreementScore
-      if scoreDiff != 0
-    ) {
-      transToScoreDiff(trans) += scoreDiff
-    }
+  def findBestTransformation(alignTrees: ParVector[AlignmentTree]): Option[Transformation] = {
+    val transToScoreDiff = alignTrees.flatMap(alignTree => {
+      alignTree.transformationToScoreDiff.iterator//.filter(_._2 != 0)
+    }).groupBy(_._1).mapValues(_.map(_._2).sum)
 
     if (transToScoreDiff.isEmpty) None
     else {
@@ -45,5 +32,9 @@ object TransformationExtractor extends TransformationExtractor with Logging {
       if (bestDiff > 0) Some(bestTrans)
       else None
     }
+
   }
+
+  def findBestTransformation(alignTrees: Vector[AlignmentTree]): Option[Transformation] =
+    findBestTransformation(alignTrees.par)
 }

@@ -14,6 +14,12 @@ class AlignmentTree(val syntaxTree: SyntaxTree, val alignment: WordPosAlignment)
 
   def isExtractable(eSpan: Span): Boolean =
     eSpan contains alignment.fSpanToESpan(alignment.eSpanToFSpan(eSpan))
+
+  lazy val transformationToScoreDiff: Map[Transformation, Int] =
+    TransformationExtractor.extract(syntaxTree).iterator.
+      map(trans => trans -> (trans(this).agreementScore - agreementScore)).
+      filter(_._2 != 0).
+      toMap
 }
 
 object AlignmentTree {
