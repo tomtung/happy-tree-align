@@ -5,6 +5,7 @@ import com.thoughtworks.xstream.XStream
 import java.io.{PrintWriter, File}
 import java.util
 import collection.JavaConversions._
+import collection.parallel.immutable.ParVector
 
 object Main extends Logging {
 
@@ -83,16 +84,31 @@ object Main extends Logging {
       sys.exit(1)
     }
 
-    var trainAlignTrees = AlignmentTree.parseAlignmentTrees(config.trainTreePath, config.trainAlignPath).toVector.par
-    var devAlignTreesOp = (config.devTreePath, config.devAlignPath) match {
-      case (Some(devTreePath), Some(devAlignPath)) =>
-        Some(AlignmentTree.parseAlignmentTrees(devTreePath, devAlignPath).toVector.par)
-      case (None, None) =>
-        None
-      case _ =>
-        learnConfigParser.showUsage
-        sys.exit(1)
+    var trainAlignTrees: ParVector[AlignmentTree] =
+      AlignmentTree.parseAlignmentTrees(config.trainTreePath, config.trainAlignPath).toVector.par
+    var devAlignTreesOp: Option[ParVector[AlignmentTree]] =
+      (config.devTreePath, config.devAlignPath) match {
+        case (Some(devTreePath), Some(devAlignPath)) =>
+          Some(AlignmentTree.parseAlignmentTrees(devTreePath, devAlignPath).toVector.par)
+        case (None, None) =>
+          None
+        case _ =>
+          learnConfigParser.showUsage
+          sys.exit(1)
+      }
+
+    def logScores(nIter: Int, transformation: Transformation) {
+      val trainScore = trainAlignTrees.map(_.agreementScore).sum
+      devAlignTreesOp match {
+        case None =>
+          logger.info(s"Iteration $nIter:\t$transformation\tTrain Score: $trainScore")
+        case Some(devAlignTrees) =>
+          val devScore = devAlignTreesOp.get.map(_.agreementScore).sum
+          logger.info(s"Iteration $nIter:\t$transformation\tTrain Score: $trainScore\tDev Score: $devScore")
+      }
     }
+
+    logScores(0, null)
 
     val bestTrans = new util.ArrayList[Transformation](config.nIter)
 
@@ -106,17 +122,9 @@ object Main extends Logging {
       bestTrans.add(trans)
 
       trainAlignTrees = trainAlignTrees.map(trans(_))
-      val newTrainScore = trainAlignTrees.map(_.agreementScore).sum
+      devAlignTreesOp = devAlignTreesOp.map(_.map(trans(_)))
 
-      devAlignTreesOp match {
-        case None =>
-          logger.info(s"Iteration $i:\t$trans\tTrain Score: $newTrainScore")
-
-        case Some(devAlignTrees) =>
-          devAlignTreesOp = Some(devAlignTrees.map(trans(_)))
-          val newDevScore = devAlignTreesOp.get.map(_.agreementScore).sum
-          logger.info(s"Iteration $i:\t$trans\tTrain Score: $newTrainScore\tDev Score: $newDevScore")
-      }
+      logScores(i, trans)
 
       if (i % 20 == 0 && config.outPath.isDefined) {
         logger.info("Saving transformation sequence up till now...")
