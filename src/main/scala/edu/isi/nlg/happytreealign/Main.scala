@@ -31,7 +31,7 @@ object Main extends Logging {
       argOpt("<align.dev>", "optional, path to dev alignment file") {
         (s, c) => c.copy(devAlignPath = Some(s))
       },
-      intOpt("n", "n-iter", s"max number of transformations to learn (default $defaultNIter)") {
+      intOpt("n", "n-trans", s"max number of transformations to learn (default $defaultNIter)") {
         (i, c) => c.copy(nIter = i)
       },
       opt("o", "out", "output path (print to stdout by defult)") {
@@ -57,7 +57,7 @@ object Main extends Logging {
       arg("<out-tree>", "output tree file") {
         (s, c) => c.copy(outTreePath = s)
       },
-      intOpt("n", "use first n transformations (use all by default)") {
+      intOpt("n", "n-trans", "use first n transformations (use all by default)") {
         (i, c) => c.copy(nTrans = Some(i))
       }
     )
@@ -96,7 +96,7 @@ object Main extends Logging {
 
     val bestTrans = new util.ArrayList[Transformation](config.nIter)
 
-    logger.trace("start")
+    logger.trace("Start learning...")
     for (
       i <- (1 to config.nIter).iterator;
       transOp = TransformationExtractor.findBestTransformation(trainAlignTrees)
@@ -117,15 +117,25 @@ object Main extends Logging {
           val newDevScore = devAlignTreesOp.get.map(_.agreementScore).sum
           logger.info(s"Iteration $i:\t$trans\tTrain Score: $newTrainScore\tDev Score: $newDevScore")
       }
+
+      if (i % 20 == 0 && config.outPath.isDefined) {
+        logger.info("Saving transformation sequence up till now...")
+        writeBestTrans(bestTrans, config.outPath)
+      }
     }
 
+    writeBestTrans(bestTrans, config.outPath)
+  }
+
+  def writeBestTrans(bestTrans: util.ArrayList[Transformation], outPathOp: Option[String]) {
     val xStream = getXStream()
 
-    config.outPath match {
+    outPathOp match {
       case Some(outPath) =>
         val writer = new PrintWriter(outPath, "UTF-8")
         xStream.toXML(bestTrans, writer)
         writer.close()
+        logger.info("Result saved to " + outPath)
       case None =>
         println(xStream.toXML(bestTrans))
     }
@@ -153,6 +163,7 @@ object Main extends Logging {
     xStream.alias("Flatten", classOf[Flatten])
     xStream.alias("Promote", classOf[Promote])
     xStream.alias("Transfer", classOf[Transfer])
+
     xStream
   }
 
@@ -177,11 +188,19 @@ object Main extends Logging {
 
     val writer = new PrintWriter(config.outTreePath, "UTF-8")
 
-    io.Source.fromFile(config.inTreePath).getLines().
-      map(line => {
-      if (line.trim.isEmpty) ""
-      else applyAllTrans(SyntaxTree.parse(line)).toString
-    }).foreach(writer.println _)
+    val lineIter = io.Source.fromFile(config.inTreePath).getLines()
+
+    val chunkSize = 20000
+    var counter = 0
+    while (!lineIter.isEmpty) {
+      val lineChunk = lineIter.take(chunkSize).toVector.par
+      lineChunk.map(line =>
+        if (line.trim.isEmpty) ""
+        else applyAllTrans(SyntaxTree.parse(line)).toString
+      ).seq.foreach(writer.println _)
+      counter += lineChunk.length
+      logger.info(s"$counter processed")
+    }
 
     writer.close()
   }
