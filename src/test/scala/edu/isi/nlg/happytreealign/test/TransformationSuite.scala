@@ -3,6 +3,7 @@ package edu.isi.nlg.happytreealign.test
 import org.scalatest.FunSuite
 import edu.isi.nlg.happytreealign._
 import edu.isi.nlg.happytreealign.trans._
+import Direction._
 
 class TransformationSuite extends FunSuite {
   test("apply articulate transformation") {

@@ -22,9 +22,10 @@ object TransformationExtractor extends TransformationExtractor with Logging {
     extractors.iterator.flatMap(_.extractAtAnchorNode(node))
 
   def findBestTransformation(alignTrees: ParVector[AlignmentTree]): Option[Transformation] = {
-    val transToScoreDiff = alignTrees.flatMap(alignTree => {
-      alignTree.transformationToScoreDiff.iterator//.filter(_._2 != 0)
-    }).groupBy(_._1).mapValues(_.map(_._2).sum)
+    val transToScoreDiff = alignTrees.
+      flatMap(_.transformationToScoreDiff.iterator).
+      groupBy(_._1).
+      mapValues(_.map(_._2).sum)
 
     if (transToScoreDiff.isEmpty) None
     else {

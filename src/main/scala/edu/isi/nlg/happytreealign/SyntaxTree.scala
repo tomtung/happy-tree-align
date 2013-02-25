@@ -52,6 +52,8 @@ class SyntaxTree(val root: Node) {
 
   def traverseLeftRightBottomUp: List[Node] = root.traverseLeftRightBottomUp
 
+  lazy val nNonTerminal: Int = traverseLeftRightBottomUp.count(!_.isLeaf)
+
   def traversePostOrder: List[Node] = root.traversePostOrder
 
   def replace(oldNode: Node, newNode: Node): SyntaxTree = {

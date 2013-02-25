@@ -30,6 +30,8 @@ Usage: happy-tree-align apply [options] <trans> <in-tree> <out-tree>
 
   -n <value> | --n-trans <value>
         use first n transformations (use all by default)
+  --align <value>
+        path to alignment file; agreement scores after each transformation will be reported if provided
   <trans>
         transformation sequence file
   <in-tree>

@@ -2,6 +2,11 @@ package edu.isi.nlg.happytreealign
 
 sealed trait Direction
 
-case object Left extends Direction
+object Direction {
 
-case object Right extends Direction
+  case object Left extends Direction
+
+  case object Right extends Direction
+
+}
+

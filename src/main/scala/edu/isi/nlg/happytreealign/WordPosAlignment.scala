@@ -43,12 +43,12 @@ object WordPosAlignment {
     val pairs = s.trim.split("\\s+").map(ps => {
       val split = ps.split('-')
       if (split.length != 2)
-        throw new ParsingException("Invalid alignment string: " + s)
+        throw new ParsingException(message = "Invalid alignment string: " + s)
       try {
         split(0).toInt -> split(1).toInt
       } catch {
         case e: Exception =>
-          throw new ParsingException("Invalid alignment string: " + s, e)
+          throw new ParsingException(message = "Invalid alignment string: " + s, cause = e)
       }
     })
 
