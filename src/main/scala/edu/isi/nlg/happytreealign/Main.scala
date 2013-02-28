@@ -4,39 +4,60 @@ import com.typesafe.scalalogging.slf4j.Logging
 import java.io.{PrintWriter, File}
 import java.util
 import collection.parallel.immutable.ParVector
-import util.concurrent.atomic.AtomicLongArray
+import util.concurrent.atomic.{AtomicLong, AtomicLongArray}
 import annotation.tailrec
 import collection.JavaConversions._
+import scopt.immutable.OptionParser
 
 object Main {
+
+  val appName = "happy-tree-align"
+
+  lazy val entrances = List(MainLearn, MainApply, MainScore).map(e => e.name -> e).toMap
+
   def main(args: Array[String]) {
-    if (args.isEmpty || args(0) != "learn" && args(0) != "apply") {
-      MainLearn.learnConfigParser.showUsage
-      MainApply.applyConfigParser.showUsage
+
+    if (args.isEmpty || !entrances.contains(args(0))) {
+      entrances.values.foreach(_.printUsage())
       sys.exit(1)
     }
 
-    args(0) match {
-      case "learn" =>
-        MainLearn(args.drop(1))
-      case "apply" =>
-        MainApply(args.drop(1))
-    }
+    entrances(args(0))(args.drop(1))
   }
 }
 
-object MainLearn extends Logging {
+// This trait is bizarre in a few ways, but I don't yet have motivation to further refactor it...
+trait MainEntrance {
+  def name: String
+
+  def fullName = s"${Main.appName} $name"
+
+  type Config
+
+  def configParser: OptionParser[Config]
+
+  def printUsage() {
+    configParser.showUsage
+  }
+
+  def apply(args: Seq[String])
+
+}
+
+object MainLearn extends MainEntrance with Logging {
+
+  override val name = "learn"
 
   val defaultNIter = 200
 
-  case class LearnConfig(trainTreePath: String,
-                         trainAlignPath: String,
-                         devTreePathOp: Option[String] = None,
-                         devAlignPathOp: Option[String] = None,
-                         nIter: Int = defaultNIter,
-                         outPathOp: Option[String] = None)
+  case class Config(trainTreePath: String = null,
+                    trainAlignPath: String = null,
+                    devTreePathOp: Option[String] = None,
+                    devAlignPathOp: Option[String] = None,
+                    nIter: Int = defaultNIter,
+                    outPathOp: Option[String] = None)
 
-  val learnConfigParser = new scopt.immutable.OptionParser[LearnConfig]("happy-tree-align learn") {
+  override val configParser = new OptionParser[Config](this.fullName) {
     override def options = Seq(
       arg("<tree.train>", "path to training tree file") {
         (s, c) => c.copy(trainTreePath = s)
@@ -53,14 +74,14 @@ object MainLearn extends Logging {
       intOpt("n", "n-trans", s"max number of transformations to learn (default $defaultNIter)") {
         (i, c) => c.copy(nIter = i)
       },
-      opt("o", "out", "output path (print to stdout by defult)") {
+      opt("o", "out", "output path (print to stdout by default)") {
         (s, c) => c.copy(outPathOp = Some(s))
       }
     )
   }
 
-  def apply(args: Seq[String]) {
-    val config = learnConfigParser.parse(args, LearnConfig(null, null)).getOrElse {
+  override def apply(args: Seq[String]) {
+    val config = configParser.parse(args, Config()).getOrElse {
       sys.exit(1)
     }
 
@@ -122,7 +143,7 @@ object MainLearn extends Logging {
         case (None, None) =>
           None
         case _ =>
-          learnConfigParser.showUsage
+          configParser.showUsage
           sys.exit(1)
       }
     logScores(0, null, trainAlignTrees, devAlignTreesOp)
@@ -139,15 +160,17 @@ object MainLearn extends Logging {
 
 }
 
-object MainApply extends Logging {
+object MainApply extends MainEntrance with Logging {
 
-  case class ApplyConfig(transPath: String,
-                         inTreePath: String,
-                         outTreePath: String,
-                         nTransOp: Option[Int] = None,
-                         alignPathOp: Option[String] = None)
+  override val name = "apply"
 
-  val applyConfigParser = new scopt.immutable.OptionParser[ApplyConfig]("happy-tree-align apply") {
+  case class Config(transPath: String = null,
+                    inTreePath: String = null,
+                    outTreePath: Option[String] = None,
+                    nTransOp: Option[Int] = None,
+                    alignPathOp: Option[String] = None)
+
+  override val configParser = new OptionParser[Config](this.fullName) {
 
     override def options = Seq(
       arg("<trans>", "transformation sequence file") {
@@ -156,20 +179,20 @@ object MainApply extends Logging {
       arg("<in-tree>", "input tree file") {
         (s, c) => c.copy(inTreePath = s)
       },
-      arg("<out-tree>", "output tree file") {
-        (s, c) => c.copy(outTreePath = s)
+      argOpt("<align>", "optional path to alignment file. if provided, report agreement scores after each transformation") {
+        (s, c) => c.copy(alignPathOp = Some(s))
+      },
+      opt("o", "out", "output path. print to stdout by default") {
+        (s, c) => c.copy(outTreePath = Some(s))
       },
       intOpt("n", "n-trans", "use first n transformations (use all by default)") {
         (i, c) => c.copy(nTransOp = Some(i))
-      },
-      opt("align", "path to alignment file; agreement scores after each transformation will be reported if provided") {
-        (s, c) => c.copy(alignPathOp = Some(s))
       }
     )
   }
 
-  def apply(args: Seq[String]) {
-    val config = applyConfigParser.parse(args, ApplyConfig(null, null, null)).getOrElse {
+  override def apply(args: Seq[String]) {
+    val config = configParser.parse(args, Config()).getOrElse {
       sys.exit(1)
     }
 
@@ -183,95 +206,172 @@ object MainApply extends Logging {
       }
     }
 
-    // scores(i) = total score after i transformations
-    val scores = new AtomicLongArray(transformations.length + 1)
-    // nNonTerms(i) = total number of non-terminal symbols after i transformations
-    val nNonTerms = new AtomicLongArray(transformations.length + 1)
+    def transformPrintTrees[T](transformTree: T => SyntaxTree)
+                              (treeOpStream: => Stream[Option[T]]) {
+      val chunkSize = 20000
 
-    val writer = new PrintWriter(config.outTreePath, "UTF-8")
+      val writerOp = config.outTreePath.map(new PrintWriter(_, "UTF-8"))
+      def printLine(arg: Any) {
+        writerOp match {
+          case Some(writer) =>
+            writer.println(arg)
+          case None =>
+            println(arg)
+        }
+      }
+
+      @tailrec
+      def doTransformAndPrint(treeOpStream: Stream[Option[T]], counter: Int = 0) {
+        if (treeOpStream.isEmpty) {
+          logger.info("All trees transformed")
+        } else {
+          val (chunk, rest) = treeOpStream.splitAt(chunkSize)
+
+          chunk.toVector.par.map {
+            case Some(tree) =>
+              transformTree(tree).toString
+            case None => ""
+          }.seq.foreach(printLine)
+
+          val updatedCounter = counter + chunk.length
+          logger.info(s"$updatedCounter lines processed.")
+
+          doTransformAndPrint(rest, updatedCounter)
+        }
+      }
+
+      doTransformAndPrint(treeOpStream)
+      writerOp.foreach(_.close())
+    }
+
+    config.alignPathOp match {
+      case Some(alignPath) =>
+        def aTreeOpStream = AlignmentTree.parseAlignmentTreesOp(config.inTreePath, alignPath).toStream
+        // scores(i) = total score after i transformations
+        val scores = new AtomicLongArray(transformations.length + 1)
+        // nNonTerms(i) = total number of non-terminal symbols after i transformations
+        val nNonTerms = new AtomicLongArray(transformations.length + 1)
+
+        def transformATree(originTree: AlignmentTree): SyntaxTree = {
+
+          scores.addAndGet(0, originTree.agreementScore)
+          nNonTerms.addAndGet(0, originTree.syntaxTree.nNonTerminal)
+
+          transformations.zipWithIndex.foldLeft(originTree)(
+            (currTree, transWithIndex) => {
+              val (trans, index) = transWithIndex
+              val transformedTree = trans(currTree)
+
+              scores.addAndGet(index + 1, transformedTree.agreementScore)
+              nNonTerms.addAndGet(index + 1, transformedTree.syntaxTree.nNonTerminal)
+
+              transformedTree
+            }
+          ).syntaxTree
+        }
+
+        transformPrintTrees(transformATree)(aTreeOpStream)
+
+        System.err.println("#Transformation\tAgreement-Score\t#Non-Terminals")
+        for (i <- 0 until scores.length) {
+          System.err.println(i + "\t" + scores.get(i) + "\t" + nNonTerms.get(i))
+        }
+
+      case None =>
+        def sTreeOpStream = io.Source.fromFile(config.inTreePath, "UTF-8").getLines().map(_.trim).map(line => {
+          if (line.isEmpty) None
+          else Some(SyntaxTree.parse(line))
+        }).toStream
+
+        def transformSTree(originTree: SyntaxTree): SyntaxTree =
+          transformations.foldLeft(originTree)(
+            (currTree, trans) => trans(currTree)
+          )
+
+        transformPrintTrees(transformSTree)(sTreeOpStream)
+    }
+
+  }
+
+}
+
+object MainScore extends MainEntrance with Logging {
+
+  override val name = "score"
+
+  case class Config(treePath: String = null,
+                    alignPath: String = null,
+                    outputAll: Boolean = false,
+                    outputPathOp: Option[String] = None)
+
+  val configParser = new OptionParser[Config](this.fullName) {
+    override def options = Seq(
+      arg("<tree>", "tree file") {
+        (s, c) => c.copy(treePath = s)
+      },
+      arg("<align>", "alignment file") {
+        (s, c) => c.copy(alignPath = s)
+      },
+      flag("a", "all", "output scores for all trees") {
+        c => c.copy(outputAll = true)
+      },
+      opt("o", "out", "output path. print to stdout by default") {
+        (s, c) => c.copy(outputPathOp = Some(s))
+      }
+    )
+  }
+
+  override def apply(args: Seq[String]) {
+    val config = configParser.parse(args, Config()).getOrElse {
+      sys.exit(1)
+    }
+
+    val writerOp = config.outputPathOp.map(new PrintWriter(_, "UTF-8"))
+
+    def printLine[T](arg: T) {
+      writerOp match {
+        case Some(writer) =>
+          writer.println(arg)
+        case None =>
+          println(arg)
+      }
+    }
 
     val chunkSize = 20000
 
+    val totalScore = new AtomicLong(0)
+    val totalNNonTerminal = new AtomicLong(0)
+
     @tailrec
-    def transformTrees(treeLines: Stream[String], alignLinesOp: Option[Stream[String]], counter: Int = 0) {
-      if (treeLines.isEmpty) {
-        logger.info("All trees transformed.")
-
-        if (alignLinesOp.isDefined && !alignLinesOp.get.dropWhile(_.isEmpty).isEmpty) {
-          logger.warn("Alignment file does not match tree file.")
-        }
-      } else {
-        val treeLineChunk = treeLines.take(chunkSize).toVector.par
-        val updatedCounter = counter + treeLineChunk.length
-        val alignLineChunkOp = for (alignLines <- alignLinesOp) yield alignLines.take(chunkSize).toVector.par
-
-        val transformedTreeLineChunk = alignLineChunkOp match {
-          case None =>
-            treeLineChunk.map(line =>
-              if (line.isEmpty) ""
-              else {
-                val initTree = SyntaxTree.parse(line)
-                transformations.foldLeft(initTree)((currTree, trans) => trans(currTree)).toString
-              }
-            )
-
-          case Some(alignLineChunk) =>
-            if (treeLineChunk.length != alignLineChunk.length) {
-              logger.warn("Alignment file does not match tree file.")
-            }
-
-            (treeLineChunk zip alignLineChunk).map({
-              case (treeLine, "") =>
-                logger.warn("This line in tree file has no corresponding alignment: " + treeLine)
-                val initTree = SyntaxTree.parse(treeLine)
-                transformations.foldLeft(initTree)((currTree, trans) => trans(currTree)).toString
-              case (treeLine, alignLine) =>
-                val initTree = {
-                  val syntaxTree = SyntaxTree.parse(treeLine)
-                  val align = WordPosAlignment.parseFEPairs(alignLine)
-                  new AlignmentTree(syntaxTree, align)
-                }
-
-                scores.addAndGet(0, initTree.agreementScore)
-                nNonTerms.addAndGet(0, initTree.syntaxTree.nNonTerminal)
-
-                transformations.zipWithIndex.foldLeft(initTree)(
-                  (currTree, transWithIdx) => {
-                    val (trans, idx) = transWithIdx
-                    val transformedTree = trans(currTree)
-                    scores.addAndGet(idx + 1, transformedTree.agreementScore)
-                    nNonTerms.addAndGet(idx + 1, transformedTree.syntaxTree.nNonTerminal)
-
-                    transformedTree
-                  }).syntaxTree.toString
-            })
+    def scoreTrees(treeStream: Stream[AlignmentTree], counter: Int = 0) {
+      if (!treeStream.isEmpty) {
+        val vec = treeStream.take(chunkSize).toVector.par.map(t => {
+          totalScore.addAndGet(t.agreementScore)
+          totalNNonTerminal.addAndGet(t.syntaxTree.nNonTerminal)
+          (t.agreementScore, t.syntaxTree.nNonTerminal)
+        })
+        if (config.outputAll) {
+          vec.seq.foreach({
+            case (score, nNonTerm) =>
+              printLine(s"$score\t$nNonTerm")
+          })
         }
 
-        transformedTreeLineChunk.seq.foreach(writer.println _)
+        val updatedCounter = counter + vec.length
+        logger.info(s"$updatedCounter trees processed.")
 
-        logger.info(s"$updatedCounter lines processed.")
-
-        transformTrees(
-          treeLines.drop(chunkSize),
-          alignLinesOp.map(_.drop(chunkSize)),
-          updatedCounter)
+        scoreTrees(treeStream.drop(chunkSize), updatedCounter)
       }
     }
 
-
-    val treeLines = io.Source.fromFile(config.inTreePath, "UTF-8").getLines().map(_.trim).toStream
-    val alignLinesOp =
-      for (alignPath <- config.alignPathOp)
-      yield io.Source.fromFile(alignPath, "UTF-8").getLines().map(_.trim).toStream
-    transformTrees(treeLines, alignLinesOp)
-    writer.close()
-
-    if (config.alignPathOp.isDefined) {
-      System.err.println("#Transformation\tAgreement-Score\t#Non-Terminals")
-      for (i <- 0 until scores.length) {
-        System.err.println(i + "\t" + scores.get(i) + "\t" + nNonTerms.get(i))
-      }
+    def alignTreesStream = AlignmentTree.parseAlignmentTrees(config.treePath, config.alignPath).toStream
+    if (config.outputAll) {
+      printLine("Score\t#Non-terminal")
     }
+    scoreTrees(alignTreesStream)
+    printLine(s"Total Score: ${totalScore.get()}")
+    printLine(s"Total #Non-terminal: ${totalNNonTerminal.get()}")
+
+    writerOp.foreach(_.close())
   }
-
 }

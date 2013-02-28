@@ -1,6 +1,7 @@
 package edu.isi.nlg.happytreealign
 
 import edu.isi.nlg.happytreealign.SyntaxTree.Node
+import com.typesafe.scalalogging.slf4j.Logging
 
 class AlignmentTree(val syntaxTree: SyntaxTree, val alignment: WordPosAlignment) {
   lazy val agreementScore: Int = {
@@ -22,18 +23,35 @@ class AlignmentTree(val syntaxTree: SyntaxTree, val alignment: WordPosAlignment)
       toMap
 }
 
-object AlignmentTree {
-  def parseAlignmentTrees(syntaxTreeFile: String, alignmentFile: String): Iterator[AlignmentTree] = {
+object AlignmentTree extends Logging {
+  def parseAlignmentTrees(syntaxTreeFileName: String, alignmentFileName: String): Iterator[AlignmentTree] =
+    parseAlignmentTreesOp(syntaxTreeFileName, alignmentFileName).flatten
+
+  def parseAlignmentTreesOp(syntaxTreeFileName: String, alignmentFileName: String): Iterator[Option[AlignmentTree]] = {
     def syntaxTreeLines =
-      io.Source.fromFile(syntaxTreeFile, "UTF-8").getLines()
+      io.Source.fromFile(syntaxTreeFileName, "UTF-8").getLines().map(_.trim)
     def alignmentLines =
-      io.Source.fromFile(alignmentFile, "UTF-8").getLines()
+      io.Source.fromFile(alignmentFileName, "UTF-8").getLines().map(_.trim)
 
     if (syntaxTreeLines.length != alignmentLines.length)
-      throw new ParsingException("Different number of syntax trees and word alignments")
+      throw new ParsingException("Line number different between syntax tree file and word alignment file")
 
-    (syntaxTreeLines.map(SyntaxTree.parse) zip alignmentLines.map(WordPosAlignment.parseFEPairs)).map({
-      case (tree, align) => new AlignmentTree(tree, align)
-    })
+    (syntaxTreeLines zip alignmentLines) map {
+      case (treeLine, alignLine) =>
+        if (treeLine.isEmpty != alignLine.isEmpty) {
+          if (treeLine.isEmpty) {
+            logger.warn("Alignment line paired with blank syntax tree line: " + alignLine)
+          }
+          if (alignLine.isEmpty) {
+            logger.warn("Syntax tree line paired with blank alignment line: " + treeLine)
+          }
+
+          None
+        } else Some {
+          val tree = SyntaxTree.parse(treeLine)
+          val align = WordPosAlignment.parseFEPairs(alignLine)
+          new AlignmentTree(tree, align)
+        }
+    }
   }
 }

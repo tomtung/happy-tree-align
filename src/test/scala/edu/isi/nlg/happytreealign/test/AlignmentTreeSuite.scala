@@ -45,9 +45,24 @@ class AlignmentTreeSuite extends FunSuite {
     assert(!alignmentTree.isExtractable(Span(1, 9)))
   }
 
+  test("e-span extractability 2") {
+    val syntaxTree = SyntaxTree.parse("( (S (NP+VP (NP (DT+JJ (DT the) (JJ 7)) (JJ th) (NNP+NNP (NNP world) (NNP swimming)) (NNPS championships)) (VP (VBD+PP (VBD opened) (PP (IN+NP (IN in) (NP (NNP rome))))) (NP (NN tonight)))) (. .)) )")
+    val alignment = WordPosAlignment.parseFEPairs("0-1 8-10 0-2 1-3 2-4 3-5 7-6 5-7 6-8 4-9")
+    val alignmentTree = new AlignmentTree(syntaxTree, alignment)
+
+    assert(alignmentTree.isExtractable(EmptySpan))
+    assert(alignmentTree.isExtractable(Span(0, 10)))
+    assert(alignmentTree.isExtractable(Span(0, 9)))
+    assert(alignmentTree.isExtractable(Span(7, 8)))
+    assert(alignmentTree.isExtractable(Span(6, 9)))
+    assert(alignmentTree.isExtractable(Span(0, 5)))
+    assert(alignmentTree.isExtractable(Span(6, 8)))
+    assert(!alignmentTree.isExtractable(Span(0, 1)))
+  }
+
   test("agreement score") {
-    val syntaxTree1 = SyntaxTree.parse("( (S (NP The first step) (VP (VBZ is) (S (VP (TO to) (VP (VB select) (ADVP team members)))))) )")
-    val syntaxTree2 = SyntaxTree.parse("( (S (NP The first step) (VP (VBZ is) (S (VP (TO+VB (TO to) (VB select)) (VP (ADVP team members)))))) )")
+    val syntaxTree1 = SyntaxTree.parse("( (TOP (S (NP The first step) (VP (VBZ is) (S (VP (TO to) (VP (VB select) (ADVP team members))))))) )")
+    val syntaxTree2 = SyntaxTree.parse("( (TOP (S (NP The first step) (VP (VBZ is) (S (VP (TO+VB (TO to) (VB select)) (VP (ADVP team members))))))) )")
     val alignment = WordPosAlignment.fromFEPairs(List(0 -> 1, 1 -> 0, 1 -> 2, 2 -> 3, 3 -> 4, 3 -> 5, 4 -> 6, 4 -> 7))
     assert(new AlignmentTree(syntaxTree2, alignment).agreementScore === 6)
     assert(new AlignmentTree(syntaxTree1, alignment).agreementScore === 4)
