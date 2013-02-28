@@ -15,7 +15,7 @@ Usage: happy-tree-align learn [options] <tree.train> <align.train> <tree.dev> <a
   -n <value> | --n-trans <value>
         max number of transformations to learn (default 200)
   -o <value> | --out <value>
-        output path (print to stdout by defult)
+        output path (print to stdout by default)
   <tree.train>
         path to training tree file
   <align.train>
@@ -26,18 +26,30 @@ Usage: happy-tree-align learn [options] <tree.train> <align.train> <tree.dev> <a
         optional, path to dev alignment file
 
 
-Usage: happy-tree-align apply [options] <trans> <in-tree> <out-tree>
+Usage: happy-tree-align apply [options] <trans> <in-tree> <align>
 
+  -o <value> | --out <value>
+        output path. print to stdout by default
   -n <value> | --n-trans <value>
         use first n transformations (use all by default)
-  --align <value>
-        path to alignment file; agreement scores after each transformation will be reported if provided
   <trans>
         transformation sequence file
   <in-tree>
         input tree file
-  <out-tree>
-        output tree file
+  <align>
+        optional, path to alignment file. if provided, report agreement scores after each transformation
+
+
+Usage: happy-tree-align score [options] <tree> <align>
+
+  -a | --all
+        output scores for all trees
+  -o <value> | --out <value>
+        output path. print to stdout by default
+  <tree>
+        tree file
+  <align>
+        alignment file
 ```
 
 ## Peformance

@@ -179,7 +179,7 @@ object MainApply extends MainEntrance with Logging {
       arg("<in-tree>", "input tree file") {
         (s, c) => c.copy(inTreePath = s)
       },
-      argOpt("<align>", "optional path to alignment file. if provided, report agreement scores after each transformation") {
+      argOpt("<align>", "optional, path to alignment file. if provided, report agreement scores after each transformation") {
         (s, c) => c.copy(alignPathOp = Some(s))
       },
       opt("o", "out", "output path. print to stdout by default") {
