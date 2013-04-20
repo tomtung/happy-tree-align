@@ -1,4 +1,5 @@
-# Happy Tree Align
+# Happy Tree Align [![Build Status](https://api.travis-ci.org/tomtung/happy-tree-align.png)](https://travis-ci.org/tomtung/happy-tree-align)
+
 This is a implementation of the method described in [Burkett, D., & Klein, D. (2012) Transforming trees to improve syntactic convergence](http://www.cs.berkeley.edu/~dburkett/papers/burkett12-tree_transform.pdf). For binlingual corpora, it learns syntax tree transformation rules to improve their agreement with corresponding word alignments. This improves the performance of syntactic machine translation systems.
 
 The name comes from the author's keynote [Happy Trees are Better than Correct Trees](http://www.cs.berkeley.edu/~dburkett/slides/burkett12-tree_transform-slides.pdf).
