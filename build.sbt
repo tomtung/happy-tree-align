@@ -6,7 +6,7 @@ organization := "edu.isi.nlg"
 
 version := "0.1-SNAPSHOT"
 
-scalaVersion := "2.10.0"
+scalaVersion := "2.10.1"
 
 libraryDependencies ++= Seq(
 	"com.github.scopt" %% "scopt" % "2.1.0",
